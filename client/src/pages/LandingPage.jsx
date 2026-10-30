@@ -18,7 +18,7 @@ function LandingPage({ health }) {
           <div className="max-w-2xl">
             <div className="mb-7 inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white">
               <Sparkles aria-hidden="true" size={16} />
-              A community built around sharing
+              <span>A community built around <span className="font-semibold text-green-100">sharing</span></span>
             </div>
             <h1 className="max-w-xl text-5xl font-bold leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
               Access what you need. Share what you don’t.
@@ -39,6 +39,12 @@ function LandingPage({ health }) {
               >
                 List your resource
               </Link>
+              <Link
+                className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
+                to="/dashboard"
+              >
+                My ShareGrid
+              </Link>
               <a className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-slate-200 transition hover:text-white" href="#how-it-works">
                 How it works <ArrowDown aria-hidden="true" size={16} />
               </a>
@@ -57,7 +63,7 @@ function LandingPage({ health }) {
                   <p className="text-sm font-semibold text-white">Share what you have</p>
                   <p className="mt-1 text-xs text-slate-400">Discover useful things nearby</p>
                 </div>
-                <span className="grid size-10 place-items-center rounded-lg bg-white/10 text-white">
+                <span className="grid size-10 place-items-center rounded-lg bg-green-700 text-white">
                   <MapPin aria-hidden="true" size={19} />
                 </span>
               </div>

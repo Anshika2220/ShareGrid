@@ -29,6 +29,8 @@ The development server runs at `http://localhost:5173`. The API client uses the 
 - `/resources` — resource catalogue placeholder (no fake listings)
 - `/resources/:resourceId` — resource details placeholder
 - `/list-resource` — six-step listing wizard with local validation (submission pending backend integration)
+- `/dashboard` — role-neutral dashboard shell with backend-pending states
+- `/bookings` — booking activity placeholder (no mock transactions)
 - `/login` — login form (backend integration pending)
 - `/register` — registration form (backend integration pending)
 - `/forgot-password` — password recovery form (backend integration pending)

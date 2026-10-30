@@ -5,6 +5,8 @@ import LandingPage from './pages/LandingPage.jsx'
 import ListingWizardPage from './pages/ListingWizardPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import AuthPage from './pages/AuthPage.jsx'
+import BookingsPage from './pages/BookingsPage.jsx'
+import DashboardPage from './pages/DashboardPage.jsx'
 import ResourceDetailsPage from './pages/ResourceDetailsPage.jsx'
 import ResourceDiscoveryPage from './pages/ResourceDiscoveryPage.jsx'
 import { useHealthStatus } from './hooks/useHealthStatus.js'
@@ -19,6 +21,8 @@ function App() {
         <Route path="/resources" element={<ResourceDiscoveryPage />} />
         <Route path="/resources/:resourceId" element={<ResourceDetailsPage />} />
         <Route path="/list-resource" element={<ListingWizardPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/bookings" element={<BookingsPage />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
         <Route path="/forgot-password" element={<AuthPage mode="forgot-password" />} />

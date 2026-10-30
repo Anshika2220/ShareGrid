@@ -8,7 +8,7 @@ function AppLayout({ children, health }) {
       <header className="border-b border-slate-200/80 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-4 sm:px-8">
           <Link aria-label="ShareGrid home" className="flex items-center gap-3" to="/">
-            <span className="grid size-10 place-items-center rounded-lg bg-black text-white">
+            <span className="grid size-10 place-items-center rounded-lg bg-green-700 text-white">
               <Boxes aria-hidden="true" size={22} />
             </span>
             <span>
@@ -25,6 +25,9 @@ function AppLayout({ children, health }) {
             </Link>
             <Link className="hidden text-sm font-semibold text-slate-600 transition hover:text-blue-700 md:block" to="/list-resource">
               List a resource
+            </Link>
+            <Link className="hidden text-sm font-semibold text-slate-600 transition hover:text-blue-700 lg:block" to="/dashboard">
+              My ShareGrid
             </Link>
             <Link className="hidden text-sm font-semibold text-slate-600 transition hover:text-blue-700 sm:block" to="/#how-it-works">
               How it works
@@ -53,7 +56,7 @@ function AppLayout({ children, health }) {
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <p className="flex items-center gap-2">
-            <HeartHandshake aria-hidden="true" className="text-blue-700" size={17} />
+            <HeartHandshake aria-hidden="true" className="text-green-700" size={17} />
             Share more. Own less. Do more.
           </p>
           <div className="flex items-center gap-4">

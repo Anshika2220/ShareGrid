@@ -11,28 +11,34 @@ const categories = [
 function LandingPage({ health }) {
   return (
     <>
-      <section className="relative overflow-hidden bg-[#10233f] text-white">
+      <section className="relative overflow-hidden bg-black text-white">
         <div aria-hidden="true" className="pointer-events-none absolute -right-36 -top-56 size-[34rem] rounded-full border border-white/10" />
         <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-32 size-[25rem] rounded-full border border-white/10" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-28">
           <div className="max-w-2xl">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-blue-300/25 bg-blue-300/10 px-3.5 py-2 text-sm font-medium text-blue-100">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white">
               <Sparkles aria-hidden="true" size={16} />
               A community built around sharing
             </div>
-            <h1 className="max-w-xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-              Make room for more of what matters.
+            <h1 className="max-w-xl text-5xl font-bold leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
+              Access what you need. Share what you don’t.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">
               Find the equipment and spaces you need from people who already have them. Put useful things to work, together.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-4">
-              <a
-                className="inline-flex items-center gap-2 rounded-full bg-blue-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                href="#resources"
+              <Link
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-black/20 transition hover:bg-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                to="/resources"
               >
                 Explore ShareGrid <ArrowRight aria-hidden="true" size={17} />
-              </a>
+              </Link>
+              <Link
+                className="inline-flex items-center gap-2 rounded-full border border-white/50 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                to="/list-resource"
+              >
+                List your resource
+              </Link>
               <a className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-slate-200 transition hover:text-white" href="#how-it-works">
                 How it works <ArrowDown aria-hidden="true" size={16} />
               </a>
@@ -43,25 +49,25 @@ function LandingPage({ health }) {
           </div>
 
           <div aria-label="ShareGrid helps people share creative equipment, workspaces, and technology" className="relative mx-auto w-full max-w-lg" role="img">
-            <div aria-hidden="true" className="absolute -left-5 top-12 size-24 rounded-full bg-blue-500/20 blur-2xl" />
-            <div aria-hidden="true" className="absolute -bottom-4 right-5 size-32 rounded-full bg-cyan-400/20 blur-2xl" />
-            <div className="relative rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-slate-950/20 backdrop-blur sm:p-7">
+            <div aria-hidden="true" className="absolute -left-5 top-12 size-24 rounded-full bg-white/10 blur-2xl" />
+            <div aria-hidden="true" className="absolute -bottom-4 right-5 size-32 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative rounded-2xl border border-white/15 bg-white/[0.06] p-5 shadow-2xl shadow-black/30 backdrop-blur sm:p-7">
               <div className="flex items-center justify-between border-b border-white/10 pb-5">
                 <div>
                   <p className="text-sm font-semibold text-white">Share what you have</p>
                   <p className="mt-1 text-xs text-slate-400">Discover useful things nearby</p>
                 </div>
-                <span className="grid size-10 place-items-center rounded-full bg-blue-400/15 text-blue-200">
+                <span className="grid size-10 place-items-center rounded-lg bg-white/10 text-white">
                   <MapPin aria-hidden="true" size={19} />
                 </span>
               </div>
               <div className="mt-5 grid gap-3">
-                {categories.map(({ label, detail, Icon }, index) => (
+                {categories.map(({ label, detail, Icon }) => (
                   <div
                     className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-4"
                     key={label}
                   >
-                    <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${index === 1 ? 'bg-violet-300/15 text-violet-200' : index === 2 ? 'bg-cyan-300/15 text-cyan-200' : 'bg-blue-300/15 text-blue-200'}`}>
+                    <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-white/10 text-white">
                       <Icon aria-hidden="true" size={21} />
                     </span>
                     <span>
@@ -89,7 +95,7 @@ function LandingPage({ health }) {
         <div className="mt-9 grid gap-4 md:grid-cols-3">
           {categories.map(({ label, detail, Icon }) => (
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-900/[0.02]" key={label}>
-              <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-700">
+              <span className="grid size-11 place-items-center rounded-lg bg-slate-100 text-slate-900">
                 <Icon aria-hidden="true" size={21} />
               </span>
               <h3 className="mt-5 text-lg font-semibold text-slate-950">{label}</h3>
@@ -128,8 +134,8 @@ function LandingPage({ health }) {
           <h2 className="text-xl font-semibold text-slate-950">Building a more shareable world.</h2>
           <p className="mt-1 text-sm text-slate-600">Connect to the ShareGrid API to start exploring live resources.</p>
         </div>
-        <Link className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700" to="/health">
-          Check API connection <ArrowRight aria-hidden="true" size={16} />
+        <Link className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700" to="/resources">
+          Explore resources <ArrowRight aria-hidden="true" size={16} />
         </Link>
       </section>
     </>

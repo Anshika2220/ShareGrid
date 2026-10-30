@@ -1,9 +1,39 @@
 @import "tailwindcss";
 
+@theme {
+  --color-blue-50: #f7f7f7;
+  --color-blue-100: #ededed;
+  --color-blue-200: #d9d9d9;
+  --color-blue-300: #bdbdbd;
+  --color-blue-400: #969696;
+  --color-blue-500: #707070;
+  --color-blue-600: #454545;
+  --color-blue-700: #000000;
+  --color-blue-800: #242424;
+  --color-blue-900: #111111;
+  --color-blue-950: #050505;
+
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f5f5f5;
+  --color-slate-200: #e5e5e5;
+  --color-slate-300: #d4d4d4;
+  --color-slate-400: #a3a3a3;
+  --color-slate-500: #737373;
+  --color-slate-600: #525252;
+  --color-slate-700: #404040;
+  --color-slate-800: #262626;
+  --color-slate-900: #171717;
+  --color-slate-950: #0a0a0a;
+
+  --radius-xl: 0.75rem;
+  --radius-2xl: 0.875rem;
+  --radius-3xl: 1rem;
+}
+
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #17243b;
-  background: #f8fafc;
+  font-family: "Uber Move", "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  color: #0a0a0a;
+  background: #fff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -44,5 +74,10 @@ a {
 
 ::selection {
   color: #fff;
-  background: #255be8;
+  background: #000;
+}
+
+a[class~="rounded-full"],
+button[class~="rounded-full"] {
+  border-radius: 0.5rem;
 }

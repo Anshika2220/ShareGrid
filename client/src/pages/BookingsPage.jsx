@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CalendarClock } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarClock, MessageSquareText } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import IntegrationNotice from '../components/common/IntegrationNotice.jsx'
 
@@ -23,12 +23,21 @@ function BookingsPage() {
             Track rentals you request and requests for resources you share.
           </p>
         </div>
-        <Link
-          className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
-          to="/resources"
-        >
-          Find a resource <ArrowRight aria-hidden="true" size={16} />
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+            to="/conversations"
+          >
+            <MessageSquareText aria-hidden="true" size={16} />
+            Negotiations
+          </Link>
+          <Link
+            className="inline-flex w-fit items-center gap-2 rounded-full bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800"
+            to="/resources"
+          >
+            Find a resource <ArrowRight aria-hidden="true" size={16} />
+          </Link>
+        </div>
       </div>
 
       <div className="mt-8">

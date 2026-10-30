@@ -1,4 +1,4 @@
-import { ArrowLeft, FileSearch } from 'lucide-react'
+import { ArrowLeft, CalendarDays, FileSearch, MessageSquareText } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import IntegrationNotice from '../components/common/IntegrationNotice.jsx'
 
@@ -48,6 +48,26 @@ function ResourceDetailsPage() {
         >
           Browse resources
         </Link>
+        <div className="mt-6 flex flex-wrap gap-3 border-t border-slate-200 pt-6">
+          <button
+            className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-500"
+            disabled
+            title="Booking requests will be enabled when backend resource and booking data are available."
+            type="button"
+          >
+            <CalendarDays aria-hidden="true" size={16} />
+            Request booking
+          </button>
+          <button
+            className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-400"
+            disabled
+            title="Negotiation starts from a real resource and booking request."
+            type="button"
+          >
+            <MessageSquareText aria-hidden="true" size={16} />
+            Start negotiation
+          </button>
+        </div>
       </div>
     </section>
   )

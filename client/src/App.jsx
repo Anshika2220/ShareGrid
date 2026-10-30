@@ -6,7 +6,12 @@ import ListingWizardPage from './pages/ListingWizardPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import AuthPage from './pages/AuthPage.jsx'
 import BookingsPage from './pages/BookingsPage.jsx'
+import BookingDetailsPage from './pages/BookingDetailsPage.jsx'
+import ConversationsPage from './pages/ConversationsPage.jsx'
+import ConversationPage from './pages/ConversationPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
+import NotificationsPage from './pages/NotificationsPage.jsx'
+import ProfilePage from './pages/ProfilePage.jsx'
 import ResourceDetailsPage from './pages/ResourceDetailsPage.jsx'
 import ResourceDiscoveryPage from './pages/ResourceDiscoveryPage.jsx'
 import { useHealthStatus } from './hooks/useHealthStatus.js'
@@ -23,6 +28,11 @@ function App() {
         <Route path="/list-resource" element={<ListingWizardPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/bookings" element={<BookingsPage />} />
+        <Route path="/bookings/:bookingId" element={<BookingDetailsPage />} />
+        <Route path="/conversations" element={<ConversationsPage />} />
+        <Route path="/conversations/:conversationId" element={<ConversationPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
         <Route path="/forgot-password" element={<AuthPage mode="forgot-password" />} />

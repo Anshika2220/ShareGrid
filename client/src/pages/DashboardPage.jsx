@@ -38,6 +38,13 @@ const pendingSections = [
     Icon: CalendarDays,
   },
   {
+    title: 'Profile',
+    description: 'Review your public profile and account details.',
+    to: '/profile',
+    action: 'View profile',
+    Icon: HeartHandshake,
+  },
+  {
     title: 'Your listings',
     description: 'Create a listing now; management of submitted listings will be connected later.',
     to: '/list-resource',
@@ -126,8 +133,8 @@ function DashboardPage() {
         {[
           { title: 'Verification', Icon: ShieldCheck, description: 'Ownership review status will appear here.' },
           { title: 'Reputation', Icon: Star, description: 'Your rating and Honor Score will come from the backend.' },
-          { title: 'Notifications', Icon: Bell, description: 'Booking and verification updates will appear here.' },
-        ].map(({ title, Icon, description }) => (
+          { title: 'Notifications', Icon: Bell, description: 'Booking and verification updates will appear here.', to: '/notifications' },
+        ].map(({ title, Icon, description, to }) => (
           <article className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5" key={title}>
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-800">
               <Icon aria-hidden="true" size={19} />
@@ -135,6 +142,11 @@ function DashboardPage() {
             <div>
               <h3 className="font-semibold text-slate-950">{title}</h3>
               <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+              {to && (
+                <Link className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 hover:underline" to={to}>
+                  Open notifications <ArrowRight aria-hidden="true" size={15} />
+                </Link>
+              )}
             </div>
           </article>
         ))}

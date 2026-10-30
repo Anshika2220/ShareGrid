@@ -31,6 +31,11 @@ The development server runs at `http://localhost:5173`. The API client uses the 
 - `/list-resource` — six-step listing wizard with local validation (submission pending backend integration)
 - `/dashboard` — role-neutral dashboard shell with backend-pending states
 - `/bookings` — booking activity placeholder (no mock transactions)
+- `/bookings/:bookingId` — booking detail and status-history placeholder
+- `/conversations` — negotiation list placeholder (no mock conversations)
+- `/conversations/:conversationId` — transaction-specific negotiation placeholder
+- `/profile` — profile form draft (backend read/save pending)
+- `/notifications` — notification centre placeholder (no mock notifications)
 - `/login` — login form (backend integration pending)
 - `/register` — registration form (backend integration pending)
 - `/forgot-password` — password recovery form (backend integration pending)

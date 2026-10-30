@@ -9,6 +9,10 @@ const asyncHandler = require('../middleware/asyncHandler');
 const env = require('../config/env');
 const { send, httpError } = require('../utils/http');
 const { isConfigured, sendAccountEmail } = require('../services/email');
+const { isConfigured: isSmsConfigured, sendVerificationCode } = require('../services/sms');
+const phoneVerificationRateLimit = require('express-rate-limit')({
+  windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false
+});
 
 const router = express.Router();
 const registerSchema = z.object({
@@ -26,7 +30,7 @@ function issueToken(user) {
 function publicUser(user) {
   return {
     id: user.id, name: user.name, email: user.email, phone: user.phone,
-    status: user.status, roles: user.roles, profile: user.profile,
+    phoneVerifiedAt: user.phoneVerifiedAt, status: user.status, roles: user.roles, profile: user.profile,
     honorScore: user.honorScore, averageRating: user.averageRating, ratingCount: user.ratingCount
   };
 }
@@ -73,6 +77,66 @@ router.post('/logout', authenticate, asyncHandler(async (req, res) => {
 }));
 
 router.get('/me', authenticate, (req, res) => send(res, 200, 'Current account', { user: publicUser(req.user) }));
+
+router.post('/phone-verification/send', authenticate, phoneVerificationRateLimit, asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id)
+    .select('+phoneVerificationTokenHash +phoneVerificationExpiresAt +phoneVerificationAttempts +phoneVerificationSentAt');
+  if (!user || !user.phone || !/^\+[1-9]\d{7,14}$/.test(user.phone)) {
+    throw httpError(400, 'Add a valid E.164 phone number to your profile before requesting verification');
+  }
+  if (user.phoneVerifiedAt) return send(res, 200, 'Phone number is already verified', {});
+  if (user.phoneVerificationSentAt && Date.now() - user.phoneVerificationSentAt.getTime() < 60_000) {
+    throw httpError(429, 'Wait at least one minute before requesting another verification code');
+  }
+  if (env.nodeEnv === 'production' && !isSmsConfigured()) {
+    throw httpError(503, 'SMS delivery must be configured before production phone verification');
+  }
+  const code = crypto.randomInt(100000, 1000000).toString();
+  user.phoneVerificationTokenHash = crypto.createHash('sha256').update(code).digest('hex');
+  user.phoneVerificationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  user.phoneVerificationAttempts = 0;
+  user.phoneVerificationSentAt = new Date();
+  await user.save();
+  if (isSmsConfigured()) {
+    try {
+      await sendVerificationCode(user.phone, code);
+    } catch (error) {
+      await user.updateOne({
+        $unset: { phoneVerificationTokenHash: 1, phoneVerificationExpiresAt: 1, phoneVerificationSentAt: 1 },
+        $set: { phoneVerificationAttempts: 0 }
+      });
+      throw error;
+    }
+  }
+  send(res, 200, 'Phone verification code sent', {
+    ...(!isSmsConfigured() && env.nodeEnv !== 'production' ? { verificationCode: code } : {})
+  });
+}));
+
+router.post('/phone-verification/verify', authenticate, phoneVerificationRateLimit, asyncHandler(async (req, res) => {
+  const input = z.object({ code: z.string().regex(/^\d{6}$/) }).parse(req.body);
+  const tokenHash = crypto.createHash('sha256').update(input.code).digest('hex');
+  const user = await User.findOneAndUpdate({
+    _id: req.user.id,
+    phone: req.user.phone,
+    phoneVerificationTokenHash: tokenHash,
+    phoneVerificationExpiresAt: { $gt: new Date() },
+    phoneVerificationAttempts: { $lt: 5 }
+  }, {
+    $set: { phoneVerifiedAt: new Date(), phoneVerificationAttempts: 0 },
+    $unset: { phoneVerificationTokenHash: 1, phoneVerificationExpiresAt: 1, phoneVerificationSentAt: 1 }
+  }, { new: true }).select('+phoneVerificationTokenHash +phoneVerificationExpiresAt +phoneVerificationAttempts');
+  if (!user) {
+    await User.updateOne({
+      _id: req.user.id,
+      phoneVerificationTokenHash: { $exists: true },
+      phoneVerificationExpiresAt: { $gt: new Date() },
+      phoneVerificationAttempts: { $lt: 5 }
+    }, { $inc: { phoneVerificationAttempts: 1 } });
+    throw httpError(400, 'Phone verification code is invalid, expired, or has exceeded the attempt limit');
+  }
+  send(res, 200, 'Phone number verified', { user: publicUser(user) });
+}));
 
 router.post('/forgot-password', asyncHandler(async (req, res) => {
   if (env.nodeEnv === 'production' && !isConfigured()) {

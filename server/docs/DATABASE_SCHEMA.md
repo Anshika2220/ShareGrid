@@ -4,7 +4,7 @@ MongoDB/Mongoose models are defined in `src/models/index.js`. ObjectId reference
 
 | Model | Purpose | Important relationships/indexes |
 |---|---|---|
-| `User` | Identity, credential hash, roles, profile, rating and Honor Score | Unique email; status |
+| `User` | Identity, credential hash, roles, profile, email/phone verification, rating and Honor Score | Unique email; status; hashed, expiring phone challenge with attempt limit |
 | `Organisation` | Organisation metadata and review status | Creator; verification status |
 | `Membership` | Authorised organisation representatives | Unique organisation/user pair |
 | `Resource` | Listing, price/deposit, location, availability, verification, aggregate rating | Owner/category/city/status; text search; reservations |

@@ -1,7 +1,7 @@
 # ShareGrid API contract
 
 Base URL: `http://localhost:5000/api`  
-Content type: JSON, except verification uploads (`multipart/form-data`, file field `file`).  
+Content type: JSON, except verification and organisation evidence uploads (`multipart/form-data`, file field `file`).  
 Authentication: `Authorization: Bearer <JWT>`. Admin routes additionally require the `admin` role.
 
 ## Response envelope
@@ -25,6 +25,8 @@ List endpoints return `data.items`; resource search also returns `data.paginatio
 | `POST /auth/reset-password` | No | `{token,password}` |
 | `POST /auth/verify-email` | No | `{token}`; consumes one-time email token |
 | `POST /auth/resend-verification` | No | `{email}` |
+| `POST /auth/phone-verification/send` | Yes | —; sends a one-time code to the profile phone |
+| `POST /auth/phone-verification/verify` | Yes | `{code}`; six digits, one use, 10-minute expiry, five attempts |
 | `GET /users/:id/public-profile` | No | — |
 
 ## Resources and ownership verification

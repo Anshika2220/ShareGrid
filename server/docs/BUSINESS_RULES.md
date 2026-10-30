@@ -2,7 +2,7 @@
 
 ## Accounts and access
 
-- Every normal account can both list and rent resources; `roles` is for authorization, not marketplace identity.
+- Every normal account can both list and rent resources; `roles` is for authorization, not marketplace identity. Phone verification codes are hashed, expire after ten minutes, allow at most five guesses, and become invalid when the profile phone number changes.
 - Passwords use bcrypt, and JWTs include a token version so logout, password changes, and suspension invalidate prior tokens.
 - Only active admin users may review verification, incidents, policies, and moderation queues. Configure the initial admin email allowlist before registration using `ADMIN_EMAILS`; do not commit it.
 - Resource, booking, conversation, review, and private evidence access is checked on the server.
@@ -13,7 +13,7 @@
 - Only active resources with approved ownership verification are discoverable and bookable.
 - Invoice and no-invoice routes have separate answer requirements. Organisation-owned assets require an approved organisation and an authorised representative.
 - Organisation owners can add existing users as representatives, submit private registration/authorisation evidence, and revoke non-owner memberships. Approval requires registration or representative-authorisation evidence and an admin review; decisions are auditable.
-- Verification documents are written to `PRIVATE_UPLOAD_DIR` and only streamed after an ownership/admin check. Use an access-controlled private volume in production; never expose this folder through a static route.
+- Verification and organisation evidence use the configured private-storage driver (`local` or S3-compatible) and are only streamed after an ownership/admin check. Keep S3 buckets private, require HTTPS endpoints in production, and never expose the local upload directory through a static route.
 - Possession challenges are random six-digit one-use codes, hashed in storage, expire after ten minutes, and are atomically consumed when proof is submitted. The code check does not itself constitute approval; a reviewer must inspect the evidence.
 
 ## Price and negotiation
@@ -52,7 +52,7 @@
 
 ## Explicit integration limitations
 
-- Email verification and password-reset flows use expiring, hashed one-time tokens. Configure SMTP before production use; development exposes one-time email tokens in responses only when SMTP is not configured. Phone verification/SMS is not integrated.
-- Resource and handover photographs are represented as URLs supplied by the caller. Private verification uploads use local private disk storage; configure a private object-storage adapter before deploying on multiple server instances.
+- Email verification and password-reset flows use expiring, hashed one-time tokens. Configure SMTP before production use; development exposes one-time email tokens in responses only when SMTP is not configured. Phone verification uses Twilio when configured; development exposes a one-time code only when SMS is not configured, while production requires Twilio credentials.
+- Resource and handover photographs are represented as URLs supplied by the caller. Private evidence can use local disk or configured S3-compatible storage. Live integration still requires provider credentials and an appropriately private bucket.
 - Admin role provisioning is an email allowlist at registration, not a separate invitation flow.
 - Human verification, incident, damage, and deposit decisions require an operator; no automated penalty is applied.

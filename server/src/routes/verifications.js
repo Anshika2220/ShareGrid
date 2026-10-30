@@ -5,10 +5,10 @@ const { z } = require('zod');
 const { Resource, Verification, VerificationEvidence, Organisation, Membership } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
-const env = require('../config/env');
 const { notify } = require('../services/notifications');
 const { send, httpError } = require('../utils/http');
 const { upload, validateFileSignature, removeTemporaryFile } = require('../services/privateUploads');
+const { storeFile, deleteFile, streamFile } = require('../services/privateStorage');
 
 const router = express.Router();
 const uploadRateLimit = require('express-rate-limit')({
@@ -74,12 +74,14 @@ router.post('/:id/evidence', authenticate, uploadRateLimit, upload.single('file'
     throw error;
   }
   let evidence;
+  let stored;
   try {
+    stored = await storeFile(req.file);
     evidence = await VerificationEvidence.create({
       verification: verification.id,
       uploader: req.user.id,
       originalName: path.basename(req.file.originalname).slice(0, 200),
-      storedName: path.basename(req.file.filename),
+      ...stored,
       mimeType: req.file.mimetype,
       size: req.file.size,
       kind
@@ -89,6 +91,13 @@ router.post('/:id/evidence', authenticate, uploadRateLimit, upload.single('file'
   } catch (error) {
     removeTemporaryFile(req.file.path);
     if (evidence) await VerificationEvidence.deleteOne({ _id: evidence.id });
+    if (stored) {
+      try {
+        await deleteFile(stored.storageProvider, stored.storedName);
+      } catch (cleanupError) {
+        console.error('Unable to remove evidence after a failed database write', cleanupError);
+      }
+    }
     throw error;
   }
   send(res, 201, 'Private evidence uploaded', { evidence: { id: evidence.id, kind: evidence.kind, originalName: evidence.originalName, size: evidence.size } });
@@ -138,11 +147,13 @@ router.post('/:id/possession-proof', authenticate, uploadRateLimit, upload.singl
     throw httpError(400, 'Possession challenge is invalid, expired, or already used');
   }
   let evidence;
+  let stored;
   try {
+    stored = await storeFile(req.file);
     evidence = await VerificationEvidence.create({
       verification: verification.id, uploader: req.user.id,
       originalName: path.basename(req.file.originalname).slice(0, 200),
-      storedName: path.basename(req.file.filename), mimeType: req.file.mimetype,
+      ...stored, mimeType: req.file.mimetype,
       size: req.file.size, kind: 'live_possession'
     });
     verification.evidence.push(evidence.id);
@@ -150,6 +161,13 @@ router.post('/:id/possession-proof', authenticate, uploadRateLimit, upload.singl
   } catch (error) {
     removeTemporaryFile(req.file.path);
     if (evidence) await VerificationEvidence.deleteOne({ _id: evidence.id });
+    if (stored) {
+      try {
+        await deleteFile(stored.storageProvider, stored.storedName);
+      } catch (cleanupError) {
+        console.error('Unable to remove possession evidence after a failed database write', cleanupError);
+      }
+    }
     throw error;
   }
   send(res, 201, 'Possession proof submitted; it still requires human review', { evidenceId: evidence.id });
@@ -170,12 +188,7 @@ router.get('/evidence/:evidenceId', authenticate, asyncHandler(async (req, res) 
     verification?.applicant.toString() === req.user.id ||
     resource?.owner.toString() === req.user.id;
   if (!allowed) throw httpError(404, 'Evidence not found');
-  const filePath = path.resolve(env.privateUploadDir, evidence.storedName);
-  if (!filePath.startsWith(path.resolve(env.privateUploadDir) + path.sep)) throw httpError(404, 'Evidence not found');
-  res.type(evidence.mimeType);
-  res.set('Cache-Control', 'private, no-store');
-  res.set('Content-Disposition', `inline; filename="${path.basename(evidence.originalName).replace(/["\\]/g, '')}"`);
-  res.sendFile(filePath);
+  await streamFile(res, evidence);
 }));
 
 module.exports = router;

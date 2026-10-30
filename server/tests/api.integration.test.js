@@ -10,6 +10,7 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'sharegrid-test-secret-with-at-least-32-characters';
 process.env.DEMO_PAYMENTS_ENABLED = 'true';
 process.env.ADMIN_EMAILS = 'admin@example.com';
+process.env.PRIVATE_STORAGE_DRIVER = 'local';
 
 let mongo;
 let app;
@@ -118,6 +119,63 @@ test('register, verify email, and reject reuse of the verification token', async
 
   const replay = await request(app).post('/api/auth/verify-email').send({ token: account.emailVerificationToken });
   assert.equal(replay.status, 400);
+});
+
+test('phone verification codes are single-use, expire, and reset when the profile phone changes', async () => {
+  const account = await register();
+  const profile = await request(app).patch('/api/users/me')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ phone: '+14155550123' });
+  assert.equal(profile.status, 200);
+  assert.equal(profile.body.data.user.phoneVerifiedAt, undefined);
+
+  const sent = await request(app).post('/api/auth/phone-verification/send')
+    .set('Authorization', `Bearer ${account.token}`).send({});
+  assert.equal(sent.status, 200, JSON.stringify(sent.body));
+  assert.match(sent.body.data.verificationCode, /^\d{6}$/);
+
+  const verified = await request(app).post('/api/auth/phone-verification/verify')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ code: sent.body.data.verificationCode });
+  assert.equal(verified.status, 200, JSON.stringify(verified.body));
+  assert.ok(verified.body.data.user.phoneVerifiedAt);
+
+  const replay = await request(app).post('/api/auth/phone-verification/verify')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ code: sent.body.data.verificationCode });
+  assert.equal(replay.status, 400);
+
+  const changed = await request(app).patch('/api/users/me')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ phone: '+14155550124' });
+  assert.equal(changed.status, 200);
+  assert.equal(changed.body.data.user.phoneVerifiedAt, undefined);
+});
+
+test('phone verification stores only a hash and stops accepting codes after five guesses', async () => {
+  const account = await register('phone-attempts@example.com');
+  await request(app).patch('/api/users/me')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ phone: '+14155550125' });
+  const sent = await request(app).post('/api/auth/phone-verification/send')
+    .set('Authorization', `Bearer ${account.token}`).send({});
+  assert.equal(sent.status, 200);
+  const { User } = require('../src/models');
+  const saved = await User.findById(account.user.id)
+    .select('+phoneVerificationTokenHash +phoneVerificationAttempts');
+  assert.notEqual(saved.phoneVerificationTokenHash, sent.body.data.verificationCode);
+  assert.equal(saved.phoneVerificationAttempts, 0);
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const response = await request(app).post('/api/auth/phone-verification/verify')
+      .set('Authorization', `Bearer ${account.token}`)
+      .send({ code: '000000' });
+    assert.equal(response.status, 400);
+  }
+  const correctAfterLimit = await request(app).post('/api/auth/phone-verification/verify')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ code: sent.body.data.verificationCode });
+  assert.equal(correctAfterLimit.status, 400);
 });
 
 test('login, protected profile, and logout invalidate the issued token', async () => {
@@ -291,6 +349,11 @@ test('organisation representatives submit private evidence before asset ownershi
   const privateEvidence = await request(app).get(`/api/organisations/evidence/${evidenceId}`)
     .set('Authorization', `Bearer ${outsider.token}`);
   assert.equal(privateEvidence.status, 404);
+
+  const ownerEvidence = await request(app).get(`/api/organisations/evidence/${evidenceId}`)
+    .set('Authorization', `Bearer ${owner.token}`);
+  assert.equal(ownerEvidence.status, 200);
+  assert.deepEqual(ownerEvidence.body, Buffer.from('%PDF-1.4\n%%EOF'));
 
   const approval = await request(app).patch(`/api/admin/organisations/${organisationId}/decision`)
     .set('Authorization', `Bearer ${admin.token}`)

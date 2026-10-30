@@ -6,8 +6,8 @@ const {
 } = require('../models');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
-const env = require('../config/env');
 const { upload, validateFileSignature, removeTemporaryFile } = require('../services/privateUploads');
+const { storeFile, deleteFile, streamFile } = require('../services/privateStorage');
 const { notify } = require('../services/notifications');
 const { send, httpError } = require('../utils/http');
 
@@ -96,12 +96,24 @@ router.post('/:id/evidence', authenticate, uploadRateLimit, upload.single('file'
     removeTemporaryFile(req.file.path);
     throw error;
   }
-  const evidence = await OrganisationEvidence.create({
-    organisation: organisation.id, uploader: req.user.id,
-    originalName: path.basename(req.file.originalname).slice(0, 200),
-    storedName: path.basename(req.file.filename), mimeType: req.file.mimetype,
-    size: req.file.size, kind
-  });
+  const stored = await storeFile(req.file);
+  let evidence;
+  try {
+    evidence = await OrganisationEvidence.create({
+      organisation: organisation.id, uploader: req.user.id,
+      originalName: path.basename(req.file.originalname).slice(0, 200),
+      ...stored, mimeType: req.file.mimetype,
+      size: req.file.size, kind
+    });
+  } catch (error) {
+    removeTemporaryFile(req.file.path);
+    try {
+      await deleteFile(stored.storageProvider, stored.storedName);
+    } catch (cleanupError) {
+      console.error('Unable to remove organisation evidence after a failed database write', cleanupError);
+    }
+    throw error;
+  }
   await notify(organisation.createdBy, 'organisation_evidence', 'Organisation verification evidence was submitted', { organisationId: organisation.id });
   send(res, 201, 'Private organisation evidence uploaded', {
     evidence: { id: evidence.id, kind: evidence.kind, originalName: evidence.originalName, size: evidence.size }
@@ -117,13 +129,7 @@ router.get('/evidence/:evidenceId', authenticate, asyncHandler(async (req, res) 
   if (!membership && evidence.uploader.toString() !== req.user.id && !req.user.roles.includes('admin')) {
     throw httpError(404, 'Evidence not found');
   }
-  const root = path.resolve(env.privateUploadDir);
-  const filePath = path.resolve(root, evidence.storedName);
-  if (!filePath.startsWith(root + path.sep)) throw httpError(404, 'Evidence not found');
-  res.type(evidence.mimeType);
-  res.set('Cache-Control', 'private, no-store');
-  res.set('Content-Disposition', `inline; filename="${path.basename(evidence.originalName).replace(/["\\]/g, '')}"`);
-  res.sendFile(filePath);
+  await streamFile(res, evidence);
 }));
 
 adminRouter.use(authenticate, requireAdmin);

@@ -15,6 +15,10 @@ const userSchema = new Schema({
   emailVerificationTokenHash: { type: String, select: false },
   emailVerificationExpiresAt: { type: Date, select: false },
   phoneVerifiedAt: Date,
+  phoneVerificationTokenHash: { type: String, select: false },
+  phoneVerificationExpiresAt: { type: Date, select: false },
+  phoneVerificationAttempts: { type: Number, default: 0, select: false },
+  phoneVerificationSentAt: { type: Date, select: false },
   profile: {
     bio: { type: String, maxlength: 500 },
     avatarUrl: String,
@@ -122,6 +126,7 @@ const evidenceSchema = new Schema({
   uploader: { type: objectId, ref: 'User', required: true },
   originalName: { type: String, required: true },
   storedName: { type: String, required: true, select: false },
+  storageProvider: { type: String, enum: ['local', 's3'], default: 'local' },
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
   kind: { type: String, enum: ['invoice', 'live_possession', 'serial_label', 'ownership', 'other'], default: 'other' }
@@ -132,6 +137,7 @@ const organisationEvidenceSchema = new Schema({
   uploader: { type: objectId, ref: 'User', required: true },
   originalName: { type: String, required: true },
   storedName: { type: String, required: true, select: false },
+  storageProvider: { type: String, enum: ['local', 's3'], default: 'local' },
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
   kind: { type: String, enum: ['registration_document', 'authorisation', 'asset_register', 'other'], required: true }

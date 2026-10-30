@@ -7,6 +7,9 @@ import NotFoundPage from './pages/NotFoundPage.jsx'
 import AuthPage from './pages/AuthPage.jsx'
 import BookingsPage from './pages/BookingsPage.jsx'
 import BookingDetailsPage from './pages/BookingDetailsPage.jsx'
+import HandoverPage from './pages/HandoverPage.jsx'
+import IncidentPage from './pages/IncidentPage.jsx'
+import ReviewPage from './pages/ReviewPage.jsx'
 import ConversationsPage from './pages/ConversationsPage.jsx'
 import ConversationPage from './pages/ConversationPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
@@ -29,6 +32,9 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/bookings" element={<BookingsPage />} />
         <Route path="/bookings/:bookingId" element={<BookingDetailsPage />} />
+        <Route path="/bookings/:bookingId/handover" element={<HandoverPage />} />
+        <Route path="/bookings/:bookingId/incident" element={<IncidentPage />} />
+        <Route path="/bookings/:bookingId/review" element={<ReviewPage />} />
         <Route path="/conversations" element={<ConversationsPage />} />
         <Route path="/conversations/:conversationId" element={<ConversationPage />} />
         <Route path="/profile" element={<ProfilePage />} />

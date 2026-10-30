@@ -32,6 +32,9 @@ The development server runs at `http://localhost:5173`. The API client uses the 
 - `/dashboard` — role-neutral dashboard shell with backend-pending states
 - `/bookings` — booking activity placeholder (no mock transactions)
 - `/bookings/:bookingId` — booking detail and status-history placeholder
+- `/bookings/:bookingId/handover` — check-in/return form preview (local draft only; submission pending backend integration)
+- `/bookings/:bookingId/incident` — incident report preview (local draft only; submission pending backend integration)
+- `/bookings/:bookingId/review` — transaction review preview (50-word limit; publication pending backend eligibility and integration)
 - `/conversations` — negotiation list placeholder (no mock conversations)
 - `/conversations/:conversationId` — transaction-specific negotiation placeholder
 - `/profile` — profile form draft (backend read/save pending)

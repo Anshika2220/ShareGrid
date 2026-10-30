@@ -100,6 +100,27 @@ function BookingDetailsPage() {
             </button>
             <Link
               className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+              to={`/bookings/${bookingId}/handover`}
+            >
+              <PackageCheck aria-hidden="true" size={16} />
+              Handover form preview
+            </Link>
+            <Link
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+              to={`/bookings/${bookingId}/incident`}
+            >
+              <ShieldAlert aria-hidden="true" size={16} />
+              Incident form preview
+            </Link>
+            <Link
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+              to={`/bookings/${bookingId}/review`}
+            >
+              <ClipboardCheck aria-hidden="true" size={16} />
+              Review form preview
+            </Link>
+            <Link
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
               to="/conversations"
             >
               <MessageSquareText aria-hidden="true" size={16} />

@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --color-blue-50: #f7f7f7;
+  --color-blue-100: #ededed;
+  --color-blue-200: #d9d9d9;
+  --color-blue-300: #bdbdbd;
+  --color-blue-400: #969696;
+  --color-blue-500: #707070;
+  --color-blue-600: #454545;
+  --color-blue-700: #000000;
+  --color-blue-800: #242424;
+  --color-blue-900: #111111;
+  --color-blue-950: #050505;
+
+  --color-green-50: #effaf3;
+  --color-green-100: #d7f3e2;
+  --color-green-600: #078b4f;
+  --color-green-700: #067a46;
+  --color-green-800: #075f39;
+
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f5f5f5;
+  --color-slate-200: #e5e5e5;
+  --color-slate-300: #d4d4d4;
+  --color-slate-400: #a3a3a3;
+  --color-slate-500: #737373;
+  --color-slate-600: #525252;
+  --color-slate-700: #404040;
+  --color-slate-800: #262626;
+  --color-slate-900: #171717;
+  --color-slate-950: #0a0a0a;
+
+  --radius-xl: 0.75rem;
+  --radius-2xl: 0.875rem;
+  --radius-3xl: 1rem;
+}
+
+:root {
+  font-family: "Uber Move", "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  color: #0a0a0a;
+  background: #fff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  font-optical-sizing: auto;
+  font-weight: 400;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  color: #fff;
+  background: #000;
+}
+
+a[class~="rounded-full"],
+button[class~="rounded-full"] {
+  border-radius: 0.5rem;
+}
+
+a[class~="bg-blue-700"],
+button[class~="bg-blue-700"] {
+  color: #fff;
+  background-color: #000;
+}
+
+a[class~="bg-blue-700"]:hover,
+button[class~="bg-blue-700"]:hover {
+  color: #fff;
+  background-color: #262626;
+}

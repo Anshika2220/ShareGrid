@@ -4,6 +4,7 @@ const { Resource, Organisation, Membership, Review } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPricingRange } = require('../services/policies');
+const { assertUserCloudinaryImages } = require('../services/cloudinary');
 const { send, httpError } = require('../utils/http');
 const { resourceInput, resourcePatchInput, toResourceData } = require('../validators/resource');
 
@@ -33,6 +34,7 @@ router.get('/mine', authenticate, asyncHandler(async (req, res) => {
 
 router.post('/', authenticate, asyncHandler(async (req, res) => {
   const input = toResourceData(resourceInput.parse(req.body));
+  assertUserCloudinaryImages(input.images, req.user.id, 'resource');
   if (input.ownershipType === 'organisation') {
     if (!input.organisation) throw httpError(400, 'Organisation ownership requires an organisation');
     const membership = await Membership.findOne({ organisation: input.organisation, user: req.user.id, status: 'active', role: { $in: ['owner', 'representative'] } });
@@ -71,6 +73,7 @@ router.patch('/:id', authenticate, asyncHandler(async (req, res) => {
   const resource = await Resource.findOne({ _id: req.params.id, owner: req.user.id });
   if (!resource) throw httpError(404, 'Resource not found');
   const input = toResourceData(resourcePatchInput.parse(req.body), resource.deposit);
+  if (input.images) assertUserCloudinaryImages(input.images, req.user.id, 'resource');
   if (resource.reservations.length && (input.price !== undefined || input.pricingUnit !== undefined)) {
     throw httpError(409, 'Price terms cannot be changed while resource reservations exist');
   }

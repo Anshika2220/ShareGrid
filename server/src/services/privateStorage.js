@@ -1,58 +1,19 @@
-const crypto = require('node:crypto');
-const { createReadStream } = require('node:fs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pipeline } = require('node:stream/promises');
-const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const env = require('../config/env');
 const { httpError } = require('../utils/http');
 
-function createPrivateStorage(config, injectedClient) {
-  const client = config.driver === 's3' ? injectedClient || new S3Client({
-    region: config.region,
-    endpoint: config.endpoint || undefined,
-    forcePathStyle: config.forcePathStyle,
-    requestChecksumCalculation: 'WHEN_REQUIRED',
-    responseChecksumValidation: 'WHEN_REQUIRED',
-    ...(config.accessKeyId ? { credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey } } : {})
-  }) : undefined;
-
+function createPrivateStorage(directory) {
   async function storeFile(file) {
-    if (config.driver === 'local') return { storedName: path.basename(file.filename), storageProvider: 'local' };
-
-    const key = `evidence/${crypto.randomUUID()}`;
-    let uploadFailed = false;
-    let uploadError;
-    try {
-      await client.send(new PutObjectCommand({
-        Bucket: config.bucket,
-        Key: key,
-        Body: createReadStream(file.path),
-        ContentLength: file.size,
-        ContentType: file.mimetype
-      }));
-    } catch (error) {
-      uploadFailed = true;
-      uploadError = error;
-    } finally {
-      try {
-        await removeTemporaryFile(file.path);
-      } catch (cleanupError) {
-        console.error('Unable to remove temporary evidence upload', cleanupError);
-      }
-    }
-    if (uploadFailed) throw uploadError;
-    return { storedName: key, storageProvider: 's3' };
+    return { storedName: path.basename(file.filename), storageProvider: 'local' };
   }
 
   async function getFile(storageProvider, storedName) {
-    if (storageProvider === 's3') {
-      if (!client || !config.bucket) throw new Error('S3 evidence storage is not configured');
-      const result = await client.send(new GetObjectCommand({ Bucket: config.bucket, Key: storedName }));
-      return result.Body;
+    if (storageProvider !== 'local') {
+      throw httpError(410, 'This evidence uses a retired storage provider and must be migrated');
     }
-    if (storageProvider !== 'local') throw new Error('Unsupported private evidence storage provider');
-    const root = path.resolve(config.directory);
+    const root = path.resolve(directory);
     const filePath = path.resolve(root, storedName);
     if (!filePath.startsWith(root + path.sep)) throw httpError(404, 'Evidence not found');
     const handle = await fs.open(filePath, 'r');
@@ -60,13 +21,10 @@ function createPrivateStorage(config, injectedClient) {
   }
 
   async function deleteFile(storageProvider, storedName) {
-    if (storageProvider === 's3') {
-      if (!client || !config.bucket) throw new Error('S3 evidence storage is not configured');
-      await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: storedName }));
-      return;
+    if (storageProvider !== 'local') {
+      throw httpError(410, 'This evidence uses a retired storage provider and must be migrated');
     }
-    if (storageProvider !== 'local') throw new Error('Unsupported private evidence storage provider');
-    const root = path.resolve(config.directory);
+    const root = path.resolve(directory);
     const filePath = path.resolve(root, storedName);
     if (!filePath.startsWith(root + path.sep)) throw httpError(404, 'Evidence not found');
     await removeTemporaryFile(filePath);
@@ -91,15 +49,6 @@ async function removeTemporaryFile(filePath) {
   }
 }
 
-const privateStorage = createPrivateStorage({
-  driver: env.privateStorageDriver,
-  directory: env.privateUploadDir,
-  bucket: env.s3Bucket,
-  region: env.s3Region,
-  endpoint: env.s3Endpoint,
-  forcePathStyle: env.s3ForcePathStyle,
-  accessKeyId: env.s3AccessKeyId,
-  secretAccessKey: env.s3SecretAccessKey
-});
+const privateStorage = createPrivateStorage(env.privateUploadDir);
 
-module.exports = { ...privateStorage, createPrivateStorage };
+module.exports = { ...privateStorage, createPrivateStorage, removeTemporaryFile };

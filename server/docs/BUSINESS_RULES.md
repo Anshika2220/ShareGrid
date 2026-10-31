@@ -9,11 +9,11 @@
 
 ## Resources and verification
 
-- A resource needs all required fields and at least four photo URLs. It is created as a draft.
+- A resource needs all required fields and at least four Cloudinary photos uploaded with the owner's signed upload scope. It is created as a draft.
 - Only active resources with approved ownership verification are discoverable and bookable.
 - Invoice and no-invoice routes have separate answer requirements. Organisation-owned assets require an approved organisation and an authorised representative.
 - Organisation owners can add existing users as representatives, submit private registration/authorisation evidence, and revoke non-owner memberships. Approval requires registration or representative-authorisation evidence and an admin review; decisions are auditable.
-- Verification and organisation evidence use the configured private-storage driver (`local` or S3-compatible) and are only streamed after an ownership/admin check. Keep S3 buckets private, require HTTPS endpoints in production, and never expose the local upload directory through a static route.
+- Listing and handover photos are public Cloudinary images, uploaded through signed parameters scoped to the current user. Verification and organisation evidence remain local-only, are never statically served, and are streamed only after an ownership/admin check.
 - Possession challenges are random six-digit one-use codes, hashed in storage, expire after ten minutes, and are atomically consumed when proof is submitted. The code check does not itself constitute approval; a reviewer must inspect the evidence.
 
 ## Price and negotiation
@@ -52,6 +52,6 @@
 ## Explicit integration limitations
 
 - Email verification and password-reset flows use expiring, hashed one-time tokens. Configure SMTP before production use; development exposes one-time email tokens in responses only when SMTP is not configured. Phone verification uses Twilio when configured; development exposes a one-time code only when SMS is not configured, while production requires Twilio credentials.
-- Resource and handover photographs are represented as URLs supplied by the caller. Private evidence can use local disk or configured S3-compatible storage. Live integration still requires provider credentials and an appropriately private bucket.
+- Resource and handover photographs must be uploaded to the configured Cloudinary account; the API rejects URLs outside the current user's signed folder. Private evidence is local-only. Existing evidence records from a retired external storage provider require migration or re-upload.
 - Admin role provisioning is an email allowlist at registration, not a separate invitation flow.
 - Human verification, incident, damage, and deposit decisions require an operator; no automated penalty is applied.

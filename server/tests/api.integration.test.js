@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { MongoMemoryServer } = require('mongodb-memory-server');
@@ -10,7 +11,9 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'sharegrid-test-secret-with-at-least-32-characters';
 process.env.DEMO_PAYMENTS_ENABLED = 'true';
 process.env.ADMIN_EMAILS = 'admin@example.com';
-process.env.PRIVATE_STORAGE_DRIVER = 'local';
+process.env.CLOUDINARY_CLOUD_NAME = 'sharegrid-test';
+process.env.CLOUDINARY_API_KEY = 'test-cloudinary-api-key';
+process.env.CLOUDINARY_API_SECRET = 'test-cloudinary-api-secret';
 
 let mongo;
 let app;
@@ -57,10 +60,19 @@ async function register(email = 'user@example.com') {
   return response.body.data;
 }
 
+function userIdFromToken(token) {
+  return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).sub;
+}
+
+function cloudinaryImageUrls(userId, purpose = 'resource', count = 4) {
+  return Array.from({ length: count }, () =>
+    `https://res.cloudinary.com/sharegrid-test/image/upload/v1234567890/sharegrid/${purpose}/${userId}/${crypto.randomUUID()}.jpg`);
+}
+
 async function createApprovedListing(ownerToken, adminToken, title = listing.title) {
   const created = await request(app).post('/api/resources')
     .set('Authorization', `Bearer ${ownerToken}`)
-    .send({ ...listing, title });
+    .send({ ...listing, title, images: cloudinaryImageUrls(userIdFromToken(ownerToken)) });
   assert.equal(created.status, 201, JSON.stringify(created.body));
   const resourceId = created.body.data.resource._id;
 
@@ -106,6 +118,39 @@ test('health endpoint returns the standard success envelope', async () => {
   assert.equal(response.status, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.status, 'ok');
+});
+
+test('Cloudinary upload signatures are authenticated and scoped to the requesting user', async () => {
+  const account = await register();
+  const unauthenticated = await request(app).post('/api/media/signature').send({ purpose: 'resource' });
+  assert.equal(unauthenticated.status, 401);
+
+  const response = await request(app).post('/api/media/signature')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ purpose: 'resource' });
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  const { upload } = response.body.data;
+  assert.equal(upload.cloudName, 'sharegrid-test');
+  assert.equal(upload.apiKey, 'test-cloudinary-api-key');
+  assert.equal(upload.folder, `sharegrid/resource/${account.user.id}`);
+  assert.match(upload.signature, /^[a-f0-9]{40}$/);
+  assert.equal('apiSecret' in upload, false);
+
+  const params = {
+    allowed_formats: 'jpg,png,webp',
+    folder: upload.folder,
+    overwrite: false,
+    public_id: upload.public_id,
+    timestamp: upload.timestamp
+  };
+  const signatureBase = Object.keys(params).sort().map((key) => `${key}=${params[key]}`).join('&');
+  const expected = crypto.createHash('sha1').update(`${signatureBase}${process.env.CLOUDINARY_API_SECRET}`).digest('hex');
+  assert.equal(upload.signature, expected);
+
+  const invalidPurpose = await request(app).post('/api/media/signature')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ purpose: 'evidence' });
+  assert.equal(invalidPurpose.status, 400);
 });
 
 test('register, verify email, and reject reuse of the verification token', async () => {
@@ -261,15 +306,25 @@ test('resource creation requires four images and stores valid listings as drafts
   const account = await register();
   const fewerImages = await request(app).post('/api/resources')
     .set('Authorization', `Bearer ${account.token}`)
-    .send({ ...listing, images: listing.images.slice(0, 3) });
+    .send({ ...listing, images: cloudinaryImageUrls(userIdFromToken(account.token), 'resource', 3) });
   assert.equal(fewerImages.status, 400);
 
   const created = await request(app).post('/api/resources')
     .set('Authorization', `Bearer ${account.token}`)
-    .send(listing);
+    .send({ ...listing, images: cloudinaryImageUrls(userIdFromToken(account.token)) });
   assert.equal(created.status, 201, JSON.stringify(created.body));
   assert.equal(created.body.data.resource.status, 'draft');
   assert.equal(created.body.data.resource.verificationStatus, 'unverified');
+
+  const otherUserImage = await request(app).post('/api/resources')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ ...listing, images: cloudinaryImageUrls('000000000000000000000000') });
+  assert.equal(otherUserImage.status, 400);
+
+  const externalImage = await request(app).post('/api/resources')
+    .set('Authorization', `Bearer ${account.token}`)
+    .send({ ...listing, images: listing.images });
+  assert.equal(externalImage.status, 400);
 });
 
 test('users cannot update another owner resource or discover unverified listings', async () => {
@@ -277,7 +332,7 @@ test('users cannot update another owner resource or discover unverified listings
   const other = await register('other@example.com');
   const created = await request(app).post('/api/resources')
     .set('Authorization', `Bearer ${owner.token}`)
-    .send(listing);
+    .send({ ...listing, images: cloudinaryImageUrls(userIdFromToken(owner.token)) });
   const resourceId = created.body.data.resource._id;
 
   const update = await request(app).patch(`/api/resources/${resourceId}`)
@@ -306,7 +361,7 @@ test('one user can create listings and book another provider resource', async ()
   const providerResource = await createApprovedListing(admin.token, admin.token);
   const ownListing = await request(app).post('/api/resources')
     .set('Authorization', `Bearer ${member.token}`)
-    .send({ ...listing, title: 'Member listing' });
+    .send({ ...listing, title: 'Member listing', images: cloudinaryImageUrls(userIdFromToken(member.token)) });
   assert.equal(ownListing.status, 201);
 
   const booking = await request(app).post('/api/bookings')
@@ -390,7 +445,7 @@ test('organisation representatives submit private evidence before asset ownershi
 
   const organisationListing = await request(app).post('/api/resources')
     .set('Authorization', `Bearer ${representative.token}`)
-    .send({ ...listing, title: 'Institutional Projector', ownershipType: 'organisation', organisation: organisationId });
+    .send({ ...listing, title: 'Institutional Projector', images: cloudinaryImageUrls(userIdFromToken(representative.token)), ownershipType: 'organisation', organisation: organisationId });
   assert.equal(organisationListing.status, 201, JSON.stringify(organisationListing.body));
 });
 
@@ -454,7 +509,11 @@ test('accepted offer completes the demo-paid handover and permits mutual reviews
   assert.equal(paid.body.data.booking.status, 'confirmed');
   if (Date.now() < start.getTime()) await new Promise((resolve) => setTimeout(resolve, start.getTime() - Date.now()));
 
-  const checkIn = { condition: 'Working, good condition', photos: ['https://example.com/handover.jpg'], accessories: ['Battery'] };
+  const checkIn = { condition: 'Working, good condition', photos: cloudinaryImageUrls(userIdFromToken(admin.token), 'handover', 1), accessories: ['Battery'] };
+  const invalidCheckIn = await request(app).post(`/api/bookings/${booking._id}/check-in`)
+    .set('Authorization', `Bearer ${admin.token}`)
+    .send({ ...checkIn, photos: ['https://example.com/handover.jpg'] });
+  assert.equal(invalidCheckIn.status, 400);
   const initialCheckIn = await request(app).post(`/api/bookings/${booking._id}/check-in`)
     .set('Authorization', `Bearer ${admin.token}`).send(checkIn);
   assert.equal(initialCheckIn.status, 201, JSON.stringify(initialCheckIn.body));
@@ -464,7 +523,7 @@ test('accepted offer completes the demo-paid handover and permits mutual reviews
 
   const checkOut = await request(app).post(`/api/bookings/${booking._id}/check-out`)
     .set('Authorization', `Bearer ${seeker.token}`)
-    .send({ condition: 'Returned working', photos: ['https://example.com/return.jpg'], accessories: ['Battery'] });
+    .send({ condition: 'Returned working', photos: cloudinaryImageUrls(userIdFromToken(seeker.token), 'handover', 1), accessories: ['Battery'] });
   assert.equal(checkOut.status, 201);
   const confirmedCheckOut = await request(app).post(`/api/bookings/${booking._id}/check-out`)
     .set('Authorization', `Bearer ${admin.token}`).send({ confirm: true });

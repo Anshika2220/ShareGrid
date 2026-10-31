@@ -126,7 +126,7 @@ const evidenceSchema = new Schema({
   uploader: { type: objectId, ref: 'User', required: true },
   originalName: { type: String, required: true },
   storedName: { type: String, required: true, select: false },
-  storageProvider: { type: String, enum: ['local', 's3'], default: 'local' },
+  storageProvider: { type: String, enum: ['local'], default: 'local' },
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
   kind: { type: String, enum: ['invoice', 'live_possession', 'serial_label', 'ownership', 'other'], default: 'other' }
@@ -137,7 +137,7 @@ const organisationEvidenceSchema = new Schema({
   uploader: { type: objectId, ref: 'User', required: true },
   originalName: { type: String, required: true },
   storedName: { type: String, required: true, select: false },
-  storageProvider: { type: String, enum: ['local', 's3'], default: 'local' },
+  storageProvider: { type: String, enum: ['local'], default: 'local' },
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
   kind: { type: String, enum: ['registration_document', 'authorisation', 'asset_register', 'other'], required: true }

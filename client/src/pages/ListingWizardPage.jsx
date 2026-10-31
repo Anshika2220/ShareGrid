@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, BadgeCheck, Check, FileImage, FileText, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import CloudinaryImageUploader from '../components/CloudinaryImageUploader.jsx'
 import { api, getApiErrorMessage } from '../services/api.js'
 
 const steps = ['Basics', 'Photos', 'Pricing', 'Availability', 'Verification', 'Review']
@@ -45,7 +46,6 @@ const initialValues = {
   city: '',
   state: '',
   postalCode: '',
-  imageUrlsText: '',
   price: '',
   priceUnit: 'daily',
   deposit: '',
@@ -77,25 +77,10 @@ function splitList(value) {
   return value.split(/[\n,]/).map((part) => part.trim()).filter(Boolean)
 }
 
-function isHttpUrl(value) {
-  try {
-    return ['http:', 'https:'].includes(new URL(value).protocol)
-  } catch {
-    return false
-  }
-}
-
-function getHostname(value) {
-  try {
-    return new URL(value).hostname
-  } catch {
-    return 'Invalid URL'
-  }
-}
-
 function ListingWizardPage() {
   const [step, setStep] = useState(0)
   const [values, setValues] = useState(initialValues)
+  const [imageUrls, setImageUrls] = useState([])
   const [invoiceFile, setInvoiceFile] = useState(null)
   const [possessionFile, setPossessionFile] = useState(null)
   const [possessionCode, setPossessionCode] = useState('')
@@ -120,8 +105,6 @@ function ListingWizardPage() {
       })
     return () => controller.abort()
   }, [])
-
-  const imageUrls = useMemo(() => splitList(values.imageUrlsText), [values.imageUrlsText])
 
   function setField(name, value) {
     setValues((current) => ({ ...current, [name]: value }))
@@ -152,8 +135,7 @@ function ListingWizardPage() {
       required('city', 'City')
     }
     if (step === 1) {
-      if (imageUrls.length < 4 || imageUrls.length > 20) next.imageUrlsText = 'Add between 4 and 20 image URLs.'
-      else if (imageUrls.some((url) => !isHttpUrl(url))) next.imageUrlsText = 'Every image must use a valid HTTP or HTTPS URL.'
+      if (imageUrls.length < 4 || imageUrls.length > 20) next.images = 'Upload between 4 and 20 photos.'
     }
     if (step === 2) {
       required('price', 'Rental price')
@@ -391,12 +373,9 @@ function ListingWizardPage() {
         </div>}
 
         {step === 1 && <div>
-          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-800"><FileImage aria-hidden="true" size={20} /></span><div><h2 className="text-xl font-semibold text-slate-950">Resource photographs</h2><p className="mt-1 text-sm leading-6 text-slate-600">Add at least 4 clear images. ShareGrid’s API accepts image URLs, not local-file uploads.</p></div></div>
-          <label className="mt-6 block text-sm font-semibold text-slate-800" htmlFor="imageUrls">Image URLs <span className="text-red-700">*</span></label>
-          <textarea className={`${fieldClass} min-h-40`} id="imageUrls" onChange={(event) => setField('imageUrlsText', event.target.value)} placeholder={'https://example.com/photo-1.jpg\nhttps://example.com/photo-2.jpg\nhttps://example.com/photo-3.jpg\nhttps://example.com/photo-4.jpg'} value={values.imageUrlsText} />
-          <p className="mt-2 text-xs text-slate-500">{imageUrls.length} of 4–20 image links entered. Use one HTTP or HTTPS URL per line.</p>
-          {errors.imageUrlsText && <p className="mt-1 text-sm text-red-700">{errors.imageUrlsText}</p>}
-          {imageUrls.length > 0 && <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{imageUrls.slice(0, 20).map((url, index) => <li className="overflow-hidden rounded-xl border border-slate-200" key={`${url}-${index}`}><img alt={`Resource preview ${index + 1}`} className="aspect-square w-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none' }} src={url} /><p className="truncate px-2 py-1.5 text-xs text-slate-600">{getHostname(url)}</p></li>)}</ul>}
+          <div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-800"><FileImage aria-hidden="true" size={20} /></span><div><h2 className="text-xl font-semibold text-slate-950">Resource photographs</h2><p className="mt-1 text-sm leading-6 text-slate-600">Upload 4–20 clear photos. Images are stored on Cloudinary and shown publicly with the listing.</p></div></div>
+          <div className="mt-6"><CloudinaryImageUploader id="resourceImages" images={imageUrls} maximum={20} minimum={4} onChange={setImageUrls} purpose="resource" /></div>
+          {errors.images && <p className="mt-2 text-sm text-red-700">{errors.images}</p>}
         </div>}
 
         {step === 2 && <div>
@@ -441,7 +420,7 @@ function ListingWizardPage() {
               ['Category', values.category],
               ['Listing owner', values.ownerType === 'organisation' ? organisationOptions.find((item) => (item._id || item.id) === values.organisationId)?.name || 'Organisation' : 'Individual'],
               ['Location', [values.city, values.state].filter(Boolean).join(', ')],
-              ['Photos', `${imageUrls.length} URLs`],
+              ['Photos', `${imageUrls.length} uploaded`],
               ['Pricing', `₹${values.price || '—'} / ${values.priceUnit === 'daily' ? 'day' : 'hour'}`],
               ['Deposit', Number(values.deposit) ? `₹${values.deposit}` : 'None'],
               ['Availability', `${values.availableFrom || '—'} to ${values.availableUntil || '—'}`],

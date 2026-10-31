@@ -36,7 +36,8 @@ List endpoints return `data.items`; resource search also returns `data.paginatio
 | `GET /resources` | No | Query: `category?`, `city?`, `q?`, `page?`, `limit?` |
 | `GET /resources/mine` | Yes | — |
 | `GET /resources/:id` | No | Returns permitted price range with approved listing |
-| `POST /resources` | Yes | Listing fields; `images` requires at least 4 URLs; deposit optional |
+| `POST /media/signature` | Yes | `{purpose:"resource"|"handover"}`; returns user-scoped Cloudinary image-upload parameters |
+| `POST /resources` | Yes | Listing fields; `images` requires at least 4 Cloudinary URLs from the owner's signed folder; deposit optional |
 | `PATCH /resources/:id` | Owner | Partial listing fields; changing identity fields returns the listing to verification |
 | `DELETE /resources/:id` | Owner | Removes when no reservation exists |
 | `PATCH /resources/:id/status` | Owner | `{status:"active"|"paused"}` |
@@ -62,8 +63,8 @@ List endpoints return `data.items`; resource search also returns `data.paginatio
 | `GET /bookings/:id` | Participant/admin | — |
 | `PATCH /bookings/:id/decision` | Provider | `{decision:"approve"|"reject",reason?}` |
 | `POST /bookings/:id/cancel` | Participant | — |
-| `POST /bookings/:id/check-in` | Participant | Initial handover `{condition,photos,accessories,notes?}`; other party confirms with `{confirm:true}` |
-| `POST /bookings/:id/check-out` | Participant | Seeker submits `{condition,photos,accessories,missingItems?,notes?}`; provider confirms with `{confirm:true}` |
+| `POST /bookings/:id/check-in` | Participant | Initial handover `{condition,photos,accessories,notes?}`; photos must be Cloudinary URLs from the submitter's signed handover folder; other party confirms with `{confirm:true}` |
+| `POST /bookings/:id/check-out` | Participant | Seeker submits `{condition,photos,accessories,missingItems?,notes?}`; photos must be Cloudinary URLs from the submitter's signed handover folder; provider confirms with `{confirm:true}` |
 | `GET /bookings/:id/handover` | Participant/admin | — |
 | `POST /bookings/:id/complete-inspection` | Provider | `{reason}` |
 | `POST /bookings/:id/deposit/refund` | Provider | `{reason}`; demo ledger entry only, no money is transferred |

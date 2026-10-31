@@ -7,6 +7,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { getPolicy } = require('../services/policies');
 const { notify } = require('../services/notifications');
 const { calculateAmount } = require('../services/businessRules');
+const { assertUserCloudinaryImages } = require('../services/cloudinary');
 const { send, httpError } = require('../utils/http');
 
 const router = express.Router();
@@ -183,6 +184,7 @@ router.post('/:id/check-in', authenticate, asyncHandler(async (req, res) => {
   }).parse(req.body);
   const booking = await Booking.findById(req.params.id);
   if (!booking || ![booking.seeker.toString(), booking.provider.toString()].includes(req.user.id)) throw httpError(404, 'Booking not found');
+  if (input.photos) assertUserCloudinaryImages(input.photos, req.user.id, 'handover');
   if (!['confirmed', 'checked_out'].includes(booking.status)) throw httpError(409, 'Only paid, confirmed bookings can check in');
   if (Date.now() < booking.start.getTime()) throw httpError(409, 'Check-in is not available before the booking start time');
   let record = await HandoverRecord.findOne({ booking: booking.id });
@@ -217,6 +219,7 @@ router.post('/:id/check-out', authenticate, asyncHandler(async (req, res) => {
   }).parse(req.body);
   const booking = await Booking.findById(req.params.id);
   if (!booking || ![booking.seeker.toString(), booking.provider.toString()].includes(req.user.id)) throw httpError(404, 'Booking not found');
+  if (input.photos) assertUserCloudinaryImages(input.photos, req.user.id, 'handover');
   if (!['checked_out', 'returned'].includes(booking.status)) throw httpError(409, 'Check-in must be recorded before return');
   const record = await HandoverRecord.findOne({ booking: booking.id });
   if (!record?.checkIn) throw httpError(409, 'Check-in record is missing');

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Camera, Check, ClipboardCheck, LoaderCircle, PackageCheck, ShieldCheck } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import CloudinaryImageUploader from '../components/CloudinaryImageUploader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api, getApiErrorMessage } from '../services/api.js'
 
@@ -30,7 +31,7 @@ function HandoverPage() {
   const [handover, setHandover] = useState(null)
   const [stage, setStage] = useState('checkin')
   const [condition, setCondition] = useState('')
-  const [photosText, setPhotosText] = useState('')
+  const [photos, setPhotos] = useState([])
   const [accessoriesText, setAccessoriesText] = useState('')
   const [missingItemsText, setMissingItemsText] = useState('')
   const [notes, setNotes] = useState('')
@@ -87,21 +88,14 @@ function HandoverPage() {
     setNotice('')
     let body = { confirm: true }
     if (canSubmitInitial) {
-      const photos = splitList(photosText)
       const accessories = splitList(accessoriesText)
       const missingItems = splitList(missingItemsText)
       if (condition.trim().length < 2) {
         setError('Describe the resource condition (at least 2 characters).')
         return
       }
-      if (!photos.length || photos.length > 20 || photos.some((value) => {
-        try {
-          return !['http:', 'https:'].includes(new URL(value).protocol)
-        } catch {
-          return true
-        }
-      })) {
-        setError('Add between 1 and 20 valid HTTP or HTTPS photo URLs.')
+      if (!photos.length || photos.length > 20) {
+        setError('Upload between 1 and 20 condition photos.')
         return
       }
       if (accessories.length > 50 || missingItems.length > 50) {
@@ -123,7 +117,7 @@ function HandoverPage() {
       setHandover(data.data.handover)
       setNotice(data.message || (canSubmitInitial ? `${stageInfo.label} details recorded.` : `${stageInfo.label} confirmed.`))
       setCondition('')
-      setPhotosText('')
+      setPhotos([])
       setAccessoriesText('')
       setMissingItemsText('')
       setNotes('')
@@ -166,9 +160,8 @@ function HandoverPage() {
               <textarea className="mt-2 block min-h-32 w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 focus:border-black focus:outline-none focus:ring-4 focus:ring-slate-100" id="condition" maxLength={2000} minLength={2} onChange={(event) => setCondition(event.target.value)} required value={condition} />
             </div>
             <div className="mt-5">
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-800" htmlFor="photos"><Camera aria-hidden="true" size={17} />Condition photo URLs <span className="text-red-700">*</span></label>
-              <p className="mt-1 text-xs leading-5 text-slate-500">The API stores image URLs rather than uploading local files. Enter 1–20 links, one per line.</p>
-              <textarea className="mt-2 block min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 focus:border-black focus:outline-none" id="photos" onChange={(event) => setPhotosText(event.target.value)} placeholder="https://…" required value={photosText} />
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Camera aria-hidden="true" size={17} />Condition photos <span className="text-red-700">*</span></div>
+              <div className="mt-3"><CloudinaryImageUploader id="handoverPhotos" images={photos} maximum={20} onChange={setPhotos} purpose="handover" /></div>
             </div>
             <div className="mt-5">
               <label className="text-sm font-semibold text-slate-800" htmlFor="accessories">Included accessories <span className="font-normal text-slate-500">(optional)</span></label>

@@ -19,7 +19,7 @@ Copy-Item .env.example .env
 
 Set `MONGO_URI`, a random `JWT_SECRET` of at least 32 characters, `CLIENT_URL`, and an optional comma-separated `ADMIN_EMAILS` allowlist in `.env`. Register an allowlisted address to provision an admin account. Never commit `.env`.
 
-Private evidence uses local disk by default. To use AWS S3 or an S3-compatible service, set `PRIVATE_STORAGE_DRIVER=s3`, `S3_BUCKET`, and `S3_REGION`. Set `S3_ENDPOINT` for compatible providers and keep `S3_FORCE_PATH_STYLE=true` when required by the provider. Credentials can use the AWS SDK default credential chain, or the paired `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` variables. Production endpoints must use HTTPS. Keep the bucket private and configure encryption at rest and lifecycle/backup policies with the provider.
+Configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` for signed uploads of public listing and handover photos. The API secret remains server-side; authenticated users receive short-lived upload signatures scoped to their own folder. The free Cloudinary tier can be used subject to its current storage, transformation, and bandwidth limits. Private invoice, possession, and organisation evidence remains on local disk under `PRIVATE_UPLOAD_DIR` and is served only after API authorization.
 
 Payment processing is demo-only: set `DEMO_PAYMENTS_ENABLED=true` to exercise booking payment flows in non-production environments. Demo payments and refunds only update test records; they never move money. Real payment processing is not configured and is unavailable in production.
 Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `MAIL_FROM` to deliver verification and password-reset emails. Do not expose SMTP credentials to the frontend.
@@ -54,10 +54,11 @@ Tests include business-rule tests and API integration tests against an ephemeral
 
 ## Security and deployment notes
 
-- Private verification and organisation files are stored locally under `PRIVATE_UPLOAD_DIR` or in a private S3-compatible bucket. Files are never statically served and are streamed only after server-side authorization.
+- Public listing and handover photos use signed Cloudinary uploads. Private verification and organisation files are stored locally under `PRIVATE_UPLOAD_DIR`, are never statically served, and are streamed only after server-side authorization.
 - Configure and rotate secrets outside source control. Use HTTPS and a trusted reverse proxy in production.
 - Email and SMS delivery require provider configuration. Development verification tokens are returned by the API only when delivery is not configured; production account flows require their respective providers.
-- Listing/handover photos use caller-provided URLs. Private uploads cover ownership and organisation evidence.
+- Listing and handover photos are uploaded directly to Cloudinary with authenticated, user-scoped signatures. Private uploads cover ownership and organisation evidence and remain local-only.
+- Existing evidence records stored by a retired external storage provider must be migrated or re-uploaded; the API does not access those providers.
 - Default policy values, integration limitations, and lifecycle rules are detailed in `docs/BUSINESS_RULES.md`.
 
 See `docs/API_CONTRACT.md` for endpoint request and response behavior.

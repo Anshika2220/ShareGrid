@@ -6,7 +6,6 @@ Standalone Express/MongoDB API for ShareGrid. The React frontend remains outside
 
 - Node.js 20+
 - MongoDB. For local development, a standalone instance works for single-document atomic reservation updates. Use a replica set when adding multi-document transactions.
-- Optional: Razorpay test credentials for live test-mode order/capture flows.
 - Optional: SMTP account for email verification and password-reset messages.
 
 ## Setup
@@ -22,7 +21,7 @@ Set `MONGO_URI`, a random `JWT_SECRET` of at least 32 characters, `CLIENT_URL`, 
 
 Private evidence uses local disk by default. To use AWS S3 or an S3-compatible service, set `PRIVATE_STORAGE_DRIVER=s3`, `S3_BUCKET`, and `S3_REGION`. Set `S3_ENDPOINT` for compatible providers and keep `S3_FORCE_PATH_STYLE=true` when required by the provider. Credentials can use the AWS SDK default credential chain, or the paired `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` variables. Production endpoints must use HTTPS. Keep the bucket private and configure encryption at rest and lifecycle/backup policies with the provider.
 
-Configure `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` to use Razorpay test mode. Without those credentials, the server can use the explicitly-labelled demo payment flow only when `DEMO_PAYMENTS_ENABLED=true` outside production.
+Payment processing is demo-only: set `DEMO_PAYMENTS_ENABLED=true` to exercise booking payment flows in non-production environments. Demo payments and refunds only update test records; they never move money. Real payment processing is not configured and is unavailable in production.
 Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `MAIL_FROM` to deliver verification and password-reset emails. Do not expose SMTP credentials to the frontend.
 Phone verification uses Twilio when `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and either `TWILIO_PHONE_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID` are set. Phone numbers must use E.164 format. In development without Twilio, the API returns the one-time code for local testing; production phone verification fails closed if SMS is not configured.
 

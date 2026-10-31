@@ -16,7 +16,7 @@ let mongo;
 let app;
 
 test.before(async () => {
-  mongo = await MongoMemoryServer.create({ instance: { launchTimeout: 30000 } });
+  mongo = await MongoMemoryServer.create({ instance: { launchTimeout: 60000 } });
   process.env.MONGO_URI = mongo.getUri();
   app = require('../src/app');
   await mongoose.connect(process.env.MONGO_URI);
@@ -433,6 +433,19 @@ test('accepted offer completes the demo-paid handover and permits mutual reviews
     .set('Authorization', `Bearer ${seeker.token}`).send({ bookingId: booking._id });
   assert.equal(order.status, 201);
   assert.equal(order.body.data.demo, true);
+  assert.equal(order.body.data.provider, 'demo');
+  assert.equal('keyId' in order.body.data, false);
+  assert.equal('orderId' in order.body.data, false);
+
+  const providerVerification = await request(app).post('/api/payments/verify')
+    .set('Authorization', `Bearer ${seeker.token}`)
+    .send({
+      paymentId: order.body.data.paymentId,
+      razorpay_order_id: 'unused',
+      razorpay_payment_id: 'unused',
+      razorpay_signature: 'unused'
+    });
+  assert.equal(providerVerification.status, 400);
 
   const paid = await request(app).post('/api/payments/verify')
     .set('Authorization', `Bearer ${seeker.token}`)
@@ -480,4 +493,20 @@ test('accepted offer completes the demo-paid handover and permits mutual reviews
     .set('Authorization', `Bearer ${seeker.token}`)
     .send({ bookingId: booking._id, rating: 5, text: 'Duplicate review.' });
   assert.equal(duplicateReview.status, 409);
+
+  const memberRefund = await request(app).post(`/api/payments/${order.body.data.paymentId}/refund`)
+    .set('Authorization', `Bearer ${seeker.token}`)
+    .send({ reason: 'Testing demo refund authorization' });
+  assert.equal(memberRefund.status, 403);
+
+  const adminRefund = await request(app).post(`/api/payments/${order.body.data.paymentId}/refund`)
+    .set('Authorization', `Bearer ${admin.token}`)
+    .send({ reason: 'Testing demo refund recording' });
+  assert.equal(adminRefund.status, 200);
+  assert.equal(adminRefund.body.data.demo, true);
+  assert.match(adminRefund.body.message, /no money was transferred/i);
+  assert.equal(adminRefund.body.data.payment.status, 'refunded');
+  const refundedBooking = await request(app).get(`/api/bookings/${booking._id}`)
+    .set('Authorization', `Bearer ${admin.token}`);
+  assert.equal(refundedBooking.body.data.booking.paymentStatus, 'refunded');
 });

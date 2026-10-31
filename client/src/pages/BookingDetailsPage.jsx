@@ -12,18 +12,6 @@ import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api, getApiErrorMessage } from '../services/api.js'
 
-async function loadRazorpayCheckout() {
-  if (window.Razorpay) return
-  await new Promise((resolve, reject) => {
-    const script = document.createElement('script')
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    script.async = true
-    script.onload = resolve
-    script.onerror = () => reject(new Error('Could not load the secure payment checkout. Please try again.'))
-    document.body.appendChild(script)
-  })
-}
-
 function BookingDetailsPage() {
   const { bookingId } = useParams()
   const { user } = useAuth()
@@ -99,41 +87,10 @@ function BookingDetailsPage() {
     try {
       const { data } = await api.post('/payments/create-order', { bookingId })
       const order = data.data
-      if (order.demo) {
-        const verified = await api.post('/payments/verify', { paymentId: order.paymentId, demoPaymentConfirmed: true })
-        setBooking(verified.data.data.booking)
-        setNotice('Demo payment confirmed. No real money was moved.')
-      } else {
-        await loadRazorpayCheckout()
-        const checkout = new window.Razorpay({
-          key: order.keyId,
-          amount: order.amount,
-          currency: order.currency,
-          order_id: order.orderId,
-          name: 'ShareGrid',
-          description: booking.resource?.title || 'Resource booking',
-          handler: async (response) => {
-            try {
-              const verified = await api.post('/payments/verify', {
-                paymentId: order.paymentId,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              })
-              setBooking(verified.data.data.booking)
-              setNotice('Payment verified and booking confirmed.')
-            } catch (requestError) {
-              setError(getApiErrorMessage(requestError))
-            } finally {
-              setBusyAction('')
-            }
-          },
-          modal: { ondismiss: () => setBusyAction('') },
-          theme: { color: '#078b4f' },
-        })
-        checkout.open()
-        return
-      }
+      if (order.demo !== true) throw new Error('Only demo payments are supported. No real payment provider is configured.')
+      const verified = await api.post('/payments/verify', { paymentId: order.paymentId, demoPaymentConfirmed: true })
+      setBooking(verified.data.data.booking)
+      setNotice('Demo payment confirmed. No real money was moved.')
       await loadBooking()
     } catch (requestError) {
       setError(getApiErrorMessage(requestError))

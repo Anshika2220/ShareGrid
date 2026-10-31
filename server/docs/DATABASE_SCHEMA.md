@@ -13,7 +13,7 @@ MongoDB/Mongoose models are defined in `src/models/index.js`. ObjectId reference
 | `OrganisationEvidence` | Private organisation registration, asset, and representative evidence metadata | Organisation/uploader |
 | `Booking` | Booking lifecycle and independent payment state | Resource, seeker, provider, date/status |
 | `Conversation`, `Message`, `Offer` | Resource-related negotiation and restricted chat | Conversation participants and offer state |
-| `Payment` | Razorpay/demo payment, provider IDs and refund state | Booking, user, status |
+| `Payment` | Demo-only payment and refund state; no external provider identifiers | Booking, user, status |
 | `DepositTransaction` | Held/refunded/deducted deposit ledger entries | Booking, user, payment, incident; one collection per booking |
 | `HandoverRecord` | Timestamped initial and return records | Unique booking |
 | `Review` | Mutual post-transaction ratings and moderation state | Unique booking/reviewer |

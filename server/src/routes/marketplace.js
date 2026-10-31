@@ -1,4 +1,3 @@
-const crypto = require('node:crypto');
 const express = require('express');
 const { z } = require('zod');
 const {
@@ -27,6 +26,12 @@ async function getConversationForUser(conversationId, userId) {
 async function notifyAdmins(type, message, data) {
   const admins = await User.find({ roles: 'admin', status: 'active' }).select('_id');
   await Promise.all(admins.map((admin) => notify(admin.id, type, message, data)));
+}
+
+function assertDemoPaymentsEnabled() {
+  if (!env.demoPaymentsEnabled || env.nodeEnv === 'production') {
+    throw httpError(503, 'Demo payments are available only when explicitly enabled outside production');
+  }
 }
 
 router.post('/conversations', authenticate, asyncHandler(async (req, res) => {
@@ -208,42 +213,14 @@ router.patch('/offers/:id/reject', authenticate, asyncHandler(async (req, res) =
   send(res, 200, 'Offer rejected', { offer });
 }));
 
-async function razorpayRequest(url, method, body) {
-  const credentials = Buffer.from(`${env.razorpayKeyId}:${env.razorpayKeySecret}`).toString('base64');
-  const response = await fetch(url, {
-    method,
-    headers: { Authorization: `Basic ${credentials}`, 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  const payload = await response.json();
-  if (!response.ok) throw httpError(502, payload.error?.description || 'Payment provider request failed');
-  return payload;
-}
-
 router.post('/payments/create-order', authenticate, asyncHandler(async (req, res) => {
   const input = z.object({ bookingId: id }).parse(req.body);
   const booking = await Booking.findOne({ _id: input.bookingId, seeker: req.user.id, status: 'approved', paymentStatus: 'unpaid' });
   if (!booking) throw httpError(404, 'An approved, unpaid booking was not found');
   const amount = Math.round((booking.totalAmount + booking.depositAmount) * 100);
   if (amount <= 0) throw httpError(400, 'Payment amount must be positive');
-  let payment;
-  if (env.razorpayKeyId && env.razorpayKeySecret) {
-    const order = await razorpayRequest('https://api.razorpay.com/v1/orders', 'POST', {
-      amount, currency: 'INR', receipt: `booking_${booking.id}`,
-      notes: { bookingId: booking.id, purpose: 'booking_and_optional_deposit' }
-    });
-    payment = await Payment.create({
-      booking: booking.id, user: req.user.id, provider: 'razorpay',
-      providerOrderId: order.id, amount: amount / 100
-    });
-    return send(res, 201, 'Payment order created', {
-      paymentId: payment.id, provider: 'razorpay', orderId: order.id,
-      amount: order.amount, currency: order.currency, keyId: env.razorpayKeyId,
-      demo: false
-    });
-  }
-  if (!env.demoPaymentsEnabled || env.nodeEnv === 'production') throw httpError(503, 'Payment provider is not configured');
-  payment = await Payment.create({ booking: booking.id, user: req.user.id, provider: 'demo', amount: amount / 100 });
+  assertDemoPaymentsEnabled();
+  const payment = await Payment.create({ booking: booking.id, user: req.user.id, provider: 'demo', amount: amount / 100 });
   send(res, 201, 'DEMO payment order created; no real money will be charged', {
     paymentId: payment.id, provider: 'demo', amount: amount / 100, currency: 'INR', demo: true
   });
@@ -252,36 +229,16 @@ router.post('/payments/create-order', authenticate, asyncHandler(async (req, res
 router.post('/payments/verify', authenticate, asyncHandler(async (req, res) => {
   const input = z.object({
     paymentId: id,
-    razorpay_order_id: z.string().optional(),
-    razorpay_payment_id: z.string().optional(),
-    razorpay_signature: z.string().optional(),
     demoPaymentConfirmed: z.literal(true).optional()
-  }).parse(req.body);
+  }).strict().parse(req.body);
   const payment = await Payment.findOne({ _id: input.paymentId, user: req.user.id, status: 'created' });
   if (!payment) throw httpError(404, 'Pending payment not found');
-  if (payment.provider === 'demo') {
-    if (!env.demoPaymentsEnabled || env.nodeEnv === 'production' || input.demoPaymentConfirmed !== true) {
-      throw httpError(403, 'Demo payment confirmation is available only in explicitly enabled non-production environments');
-    }
-  } else {
-    if (input.razorpay_order_id !== payment.providerOrderId || !input.razorpay_payment_id || !input.razorpay_signature) {
-      throw httpError(400, 'Payment verification fields do not match the created order');
-    }
-    const expected = crypto.createHmac('sha256', env.razorpayKeySecret)
-      .update(`${input.razorpay_order_id}|${input.razorpay_payment_id}`).digest();
-    let provided;
-    try { provided = Buffer.from(input.razorpay_signature, 'hex'); } catch { provided = Buffer.alloc(0); }
-    if (provided.length !== expected.length || !crypto.timingSafeEqual(expected, provided)) {
-      throw httpError(400, 'Payment signature is invalid');
-    }
-    const verifiedPayment = await razorpayRequest(
-      `https://api.razorpay.com/v1/payments/${encodeURIComponent(input.razorpay_payment_id)}`, 'GET'
-    );
-    if (verifiedPayment.order_id !== payment.providerOrderId || verifiedPayment.status !== 'captured' ||
-      verifiedPayment.amount !== Math.round(payment.amount * 100) || verifiedPayment.currency !== 'INR') {
-      throw httpError(400, 'Payment capture or amount could not be verified');
-    }
-    payment.providerPaymentId = verifiedPayment.id;
+  if (payment.provider !== 'demo') {
+    throw httpError(409, 'This payment was created by an unsupported payment provider');
+  }
+  assertDemoPaymentsEnabled();
+  if (input.demoPaymentConfirmed !== true) {
+    throw httpError(403, 'Explicit demo payment confirmation is required');
   }
   payment.status = 'paid';
   await payment.save();
@@ -314,14 +271,9 @@ router.get('/payments/:id', authenticate, asyncHandler(async (req, res) => {
 router.post('/payments/:id/refund', authenticate, requireAdmin, asyncHandler(async (req, res) => {
   const input = z.object({ reason: z.string().trim().min(5).max(1000) }).parse(req.body);
   const payment = await Payment.findById(req.params.id);
-  if (!payment || payment.status !== 'paid') throw httpError(404, 'Captured payment not found');
-  if (payment.provider === 'demo') {
-    if (env.nodeEnv === 'production') throw httpError(409, 'Demo refund is disabled in production');
-    payment.status = 'refunded';
-  } else {
-    await razorpayRequest(`https://api.razorpay.com/v1/payments/${encodeURIComponent(payment.providerPaymentId)}/refund`, 'POST', {});
-    payment.status = 'refunded';
-  }
+  if (!payment || payment.status !== 'paid' || payment.provider !== 'demo') throw httpError(404, 'Paid demo payment not found');
+  assertDemoPaymentsEnabled();
+  payment.status = 'refunded';
   payment.refundedAt = new Date();
   await payment.save();
   const booking = await Booking.findById(payment.booking);
@@ -335,7 +287,7 @@ router.post('/payments/:id/refund', authenticate, requireAdmin, asyncHandler(asy
     await booking.save();
   }
   await AuditLog.create({ actor: req.user.id, action: 'payment.refund', targetType: 'Payment', targetId: payment.id, reason: input.reason });
-  send(res, 200, 'Refund requested', { payment });
+  send(res, 200, 'DEMO refund recorded; no money was transferred', { payment, demo: true });
 }));
 
 router.post('/bookings/:id/deposit/refund', authenticate, asyncHandler(async (req, res) => {
@@ -355,23 +307,14 @@ router.post('/bookings/:id/deposit/refund', authenticate, asyncHandler(async (re
   const deducted = previous.find((item) => item._id === 'deducted')?.amount || 0;
   const amount = Number((collection.amount - refunded - deducted).toFixed(2));
   if (amount <= 0) throw httpError(409, 'No refundable deposit balance remains');
-  const payment = await Payment.findOne({ booking: booking.id, status: 'paid', providerPaymentId: { $exists: true } }).sort({ createdAt: -1 });
-  let externalReference;
-  if (payment?.provider === 'razorpay') {
-    const result = await razorpayRequest(
-      `https://api.razorpay.com/v1/payments/${encodeURIComponent(payment.providerPaymentId)}/refund`,
-      'POST',
-      { amount: Math.round(amount * 100), notes: { bookingId: booking.id, reason: input.reason } }
-    );
-    externalReference = result.id;
-  } else if (env.nodeEnv === 'production' || !env.demoPaymentsEnabled) {
-    throw httpError(503, 'A verified payment is unavailable for issuing the deposit refund');
-  }
+  const payment = await Payment.findOne({ booking: booking.id, status: 'paid', provider: 'demo' }).sort({ createdAt: -1 });
+  if (!payment) throw httpError(503, 'A paid demo payment is unavailable for recording this deposit refund');
+  assertDemoPaymentsEnabled();
   const refund = await DepositTransaction.create({
-    booking: booking.id, payment: payment?.id, user: booking.seeker, kind: 'refunded',
-    amount, status: 'completed', externalReference, actor: req.user.id, reason: input.reason
+    booking: booking.id, payment: payment.id, user: booking.seeker, kind: 'refunded',
+    amount, status: 'completed', actor: req.user.id, reason: input.reason
   });
-  send(res, 201, payment?.provider === 'razorpay' ? 'Deposit refund issued' : 'DEMO deposit refund recorded; no money was transferred', { refund, demo: payment?.provider !== 'razorpay' });
+  send(res, 201, 'DEMO deposit refund recorded; no money was transferred', { refund, demo: true });
 }));
 
 router.post('/reviews', authenticate, asyncHandler(async (req, res) => {
@@ -514,22 +457,13 @@ router.patch('/admin/incidents/:id/decision', authenticate, requireAdmin, asyncH
       throw httpError(409, 'A deposit deduction requires a resolved human-reviewed incident');
     }
     if (input.depositDecision === 'refund') {
-      const payment = await Payment.findOne({ booking: booking.id, status: 'paid', providerPaymentId: { $exists: true } }).sort({ createdAt: -1 });
-      let externalReference;
-      if (payment?.provider === 'razorpay') {
-        const result = await razorpayRequest(
-          `https://api.razorpay.com/v1/payments/${encodeURIComponent(payment.providerPaymentId)}/refund`,
-          'POST',
-          { amount: Math.round(resolutionAmount * 100), notes: { incidentId: incident.id, reason: input.reason } }
-        );
-        externalReference = result.id;
-      } else if (env.nodeEnv === 'production' || !env.demoPaymentsEnabled) {
-        throw httpError(503, 'A verified payment is unavailable for issuing this deposit refund');
-      }
+      const payment = await Payment.findOne({ booking: booking.id, status: 'paid', provider: 'demo' }).sort({ createdAt: -1 });
+      if (!payment) throw httpError(503, 'A paid demo payment is unavailable for recording this deposit refund');
+      assertDemoPaymentsEnabled();
       await DepositTransaction.create({
-        booking: booking.id, payment: payment?.id, incident: incident.id, user: booking.seeker,
+        booking: booking.id, payment: payment.id, incident: incident.id, user: booking.seeker,
         kind: 'refunded', amount: resolutionAmount, status: 'completed',
-        externalReference, actor: req.user.id, reason: input.reason
+        actor: req.user.id, reason: input.reason
       });
     }
     if (input.depositDecision === 'deduct') {

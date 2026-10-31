@@ -197,13 +197,13 @@ function AdminPage() {
 
   async function refundPayment(event) {
     event.preventDefault()
-    if (!window.confirm('Submit this payment refund? This action may contact the payment provider.')) return
+    if (!window.confirm('Record this demo refund? No money will be moved; this can cancel the associated booking.')) return
     setError('')
     setNotice('')
     setIsSubmitting(true)
     try {
       const { data } = await api.post(`/payments/${encodeURIComponent(paymentId.trim())}/refund`, { reason: refundReason.trim() })
-      setNotice(data.message || 'Refund requested.')
+      setNotice(data.message || 'Demo refund recorded. No money was moved.')
       setPaymentId('')
       setRefundReason('')
     } catch (requestError) {
@@ -317,10 +317,10 @@ function AdminPage() {
     </section>
 
     return <form className="max-w-2xl rounded-2xl border border-amber-200 bg-white p-5 sm:p-7" onSubmit={refundPayment}>
-      <div className="flex items-start gap-3"><AlertTriangle aria-hidden="true" className="mt-0.5 text-amber-700" size={20} /><div><h2 className="font-semibold text-slate-950">Refund a captured payment</h2><p className="mt-1 text-sm leading-6 text-slate-600">Enter the payment ID from the payment record. Refunds may contact the payment provider and can cancel the associated booking.</p></div></div>
+      <div className="flex items-start gap-3"><AlertTriangle aria-hidden="true" className="mt-0.5 text-amber-700" size={20} /><div><h2 className="font-semibold text-slate-950">Record a demo payment refund</h2><p className="mt-1 text-sm leading-6 text-slate-600">This only updates the demo payment record; it does not transfer money. It can cancel the associated booking.</p></div></div>
       <label className="mt-5 block text-sm font-semibold text-slate-800">Payment ID<input className={fieldClass} onChange={(event) => setPaymentId(event.target.value)} pattern="[a-fA-F0-9]{24}" required title="Enter the 24-character payment ID." value={paymentId} /></label>
       <label className="mt-4 block text-sm font-semibold text-slate-800">Reason<textarea className={fieldClass} maxLength={1000} minLength={5} onChange={(event) => setRefundReason(event.target.value)} required rows={3} value={refundReason} /></label>
-      <button className="mt-5 rounded-full bg-red-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50" disabled={isSubmitting || paymentId.trim().length === 0 || refundReason.trim().length < 5} type="submit">{isSubmitting ? 'Submitting…' : 'Submit refund'}</button>
+      <button className="mt-5 rounded-full bg-red-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50" disabled={isSubmitting || paymentId.trim().length === 0 || refundReason.trim().length < 5} type="submit">{isSubmitting ? 'Recording…' : 'Record demo refund'}</button>
     </form>
   }
 

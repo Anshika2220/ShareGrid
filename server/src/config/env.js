@@ -57,7 +57,5 @@ module.exports = {
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
   uploadMaxBytes: Number(process.env.UPLOAD_MAX_BYTES || 10 * 1024 * 1024),
   demoPaymentsEnabled: process.env.DEMO_PAYMENTS_ENABLED === 'true',
-  razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
-  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || '',
   adminEmails: (process.env.ADMIN_EMAILS || '').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
 };

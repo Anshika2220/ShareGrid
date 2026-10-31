@@ -66,7 +66,7 @@ List endpoints return `data.items`; resource search also returns `data.paginatio
 | `POST /bookings/:id/check-out` | Participant | Seeker submits `{condition,photos,accessories,missingItems?,notes?}`; provider confirms with `{confirm:true}` |
 | `GET /bookings/:id/handover` | Participant/admin | — |
 | `POST /bookings/:id/complete-inspection` | Provider | `{reason}` |
-| `POST /bookings/:id/deposit/refund` | Provider | `{reason}` |
+| `POST /bookings/:id/deposit/refund` | Provider | `{reason}`; demo ledger entry only, no money is transferred |
 | `GET /bookings/:id/deposit` | Participant/admin | Deposit ledger |
 | `GET /admin/bookings` | Admin | — |
 
@@ -83,10 +83,10 @@ List endpoints return `data.items`; resource search also returns `data.paginatio
 | `POST /conversations/:id/offers` | Participant | `{amount,bookingId?}` |
 | `POST /offers/:id/counter` | Other participant | `{amount}` |
 | `PATCH /offers/:id/accept`, `PATCH /offers/:id/reject` | Other participant | — |
-| `POST /payments/create-order` | Seeker | `{bookingId}` |
-| `POST /payments/verify` | Seeker | `{paymentId,razorpay_order_id,razorpay_payment_id,razorpay_signature}` or non-production demo `{paymentId,demoPaymentConfirmed:true}` |
+| `POST /payments/create-order` | Seeker | `{bookingId}`; non-production demo only when explicitly enabled |
+| `POST /payments/verify` | Seeker | `{paymentId,demoPaymentConfirmed:true}`; explicitly enabled non-production demo only |
 | `GET /payments/:id` | Payer/admin | — |
-| `POST /payments/:id/refund` | Admin | `{reason}` |
+| `POST /payments/:id/refund` | Admin | `{reason}`; records a demo refund only, no money is transferred |
 | `POST /reviews` | Participant | `{bookingId,rating:1..5,text}`; completed booking, max 50 words |
 | `GET /users/:id/reviews` | No | — |
 | `POST /reviews/:id/report` | Yes | `{reason}` |

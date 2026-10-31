@@ -33,10 +33,9 @@
 
 ## Payment and deposits
 
-- Booking and payment statuses are independent. Provider approval is not confirmation; the booking is confirmed only after verified payment.
-- Razorpay is used when both Razorpay credentials are present. Order creation, HMAC signature validation, payment capture state, amount and currency are verified server-side.
-- Explicit demo payments are enabled only in non-production when `DEMO_PAYMENTS_ENABLED=true`; they never move real money and the API response is labelled as demo.
-- An optional deposit is included in the captured order, then recorded separately as held. Deposit refunds and deductions are auditable records. A refund requires a verified Razorpay payment in production; demo mode only records a simulated refund.
+- Booking and payment statuses are independent. Provider approval is not confirmation; a booking becomes confirmed only after its payment is verified.
+- Payment processing is demo-only and must be explicitly enabled with `DEMO_PAYMENTS_ENABLED=true` outside production. Demo payments, refunds, and deposit ledger entries never transfer money.
+- An optional deposit is included in the demo booking amount and recorded separately as held. Deposit refunds and deductions are auditable ledger records only.
 - A deposit deduction can only be recorded by an admin while resolving an incident. Allegations do not directly alter deposits or Honor Score.
 
 ## Handover, reviews, incidents, and reputation
@@ -48,7 +47,7 @@
 - Score history records each adjustment, reviewer, reason, and booking reference.
 - Honor Score starts at zero on a 0–100 scale; only configured positive completion events or reviewed decisions change it.
 - Honor Score deductions default to zero and must exactly match a configured incident-type policy; an admin cannot invent an unconfigured penalty while resolving a report.
-- An appeal can reverse an Honor Score adjustment with an auditable compensating history entry. Reversing an already-issued deposit refund/deduction requires separate payment-provider review and is not automated.
+- An appeal can reverse an Honor Score adjustment with an auditable compensating history entry. Reversing an already-recorded deposit refund/deduction requires separate manual ledger review and is not automated.
 
 ## Explicit integration limitations
 

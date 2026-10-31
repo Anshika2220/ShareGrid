@@ -193,9 +193,7 @@ const offerSchema = new Schema({
 const paymentSchema = new Schema({
   booking: { type: objectId, ref: 'Booking', required: true, index: true },
   user: { type: objectId, ref: 'User', required: true },
-  provider: { type: String, enum: ['razorpay', 'demo'], required: true },
-  providerOrderId: String,
-  providerPaymentId: String,
+  provider: { type: String, enum: ['demo'], required: true },
   amount: { type: Number, required: true, min: 0 },
   currency: { type: String, default: 'INR' },
   status: { type: String, enum: ['created', 'paid', 'failed', 'refund_pending', 'refunded'], default: 'created', index: true },
@@ -211,7 +209,6 @@ const depositTransactionSchema = new Schema({
   kind: { type: String, enum: ['collected', 'refunded', 'deducted'], required: true },
   amount: { type: Number, required: true, min: 0.01 },
   status: { type: String, enum: ['held', 'completed'], default: 'completed' },
-  externalReference: String,
   actor: { type: objectId, ref: 'User' },
   reason: String
 }, timestamps);

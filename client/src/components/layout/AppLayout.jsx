@@ -1,8 +1,26 @@
-import { ArrowUpRight, Boxes, HeartHandshake } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Boxes, HeartHandshake, ShieldCheck } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import HealthIndicator from '../common/HealthIndicator.jsx'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { getApiErrorMessage } from '../../services/api.js'
 
 function AppLayout({ children, health }) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [logoutError, setLogoutError] = useState('')
+
+  async function handleLogout() {
+    setLogoutError('')
+    try {
+      await logout()
+      navigate('/')
+    } catch (error) {
+      setLogoutError(getApiErrorMessage(error))
+      navigate('/')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200/80 bg-white">
@@ -32,26 +50,28 @@ function AppLayout({ children, health }) {
             <Link className="hidden text-sm font-semibold text-slate-600 transition hover:text-blue-700 sm:block" to="/#how-it-works">
               How it works
             </Link>
-            <Link className="hidden text-sm font-semibold text-slate-600 transition hover:text-blue-700 sm:block" to="/login">
-              Log in
-            </Link>
-            <Link
-              className="hidden rounded-full border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 sm:inline-flex"
-              to="/register"
-            >
-              Sign up
-            </Link>
-            <Link
-              className="inline-flex items-center gap-1.5 rounded-full bg-blue-700 px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 sm:gap-2 sm:px-4"
-              to="/health"
-            >
-              API status <ArrowUpRight aria-hidden="true" size={16} />
-            </Link>
+            {user ? (
+              <>
+                <Link className="hidden text-sm font-semibold text-slate-600 transition hover:text-blue-700 sm:block" to="/dashboard">
+                  {user.name?.split(' ')[0] || 'My account'}
+                </Link>
+                {user.roles?.includes('admin') && <Link className="hidden items-center gap-1.5 text-sm font-semibold text-slate-700 transition hover:text-green-800 md:inline-flex" to="/admin"><ShieldCheck aria-hidden="true" size={15} />Admin</Link>}
+                <button className="hidden rounded-full border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 sm:inline-flex" onClick={handleLogout} type="button">
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link className="hidden text-sm font-semibold text-slate-600 transition hover:text-blue-700 sm:block" to="/login">Log in</Link>
+                <Link className="hidden rounded-full border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 sm:inline-flex" to="/register">Sign up</Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
 
       <main>{children}</main>
+      {logoutError && <p aria-live="polite" className="fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 shadow-lg">{logoutError}</p>}
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">

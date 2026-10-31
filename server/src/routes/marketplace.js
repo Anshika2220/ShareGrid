@@ -3,7 +3,7 @@ const express = require('express');
 const { z } = require('zod');
 const {
   Booking, Resource, Conversation, Message, Offer, Payment, Review, User,
-  Incident, PlatformPolicy, AuditLog, HonorScoreHistory, DepositTransaction
+  Incident, PlatformPolicy, AuditLog, HonorScoreHistory, DepositTransaction, Notification
 } = require('../models');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');

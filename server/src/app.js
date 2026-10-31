@@ -17,7 +17,23 @@ const { send } = require('./utils/http');
 const app = express();
 app.disable('x-powered-by');
 app.use(helmet());
-app.use(cors({ origin: env.clientUrl, credentials: false }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || origin === env.clientUrl) return callback(null, true);
+    if (env.nodeEnv !== 'production') {
+      try {
+        const { hostname, protocol } = new URL(origin);
+        if (protocol === 'http:' && ['localhost', '127.0.0.1'].includes(hostname)) {
+          return callback(null, true);
+        }
+      } catch {
+        return callback(null, false);
+      }
+    }
+    return callback(null, false);
+  },
+  credentials: false
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 

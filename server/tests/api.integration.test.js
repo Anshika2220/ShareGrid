@@ -16,7 +16,7 @@ let mongo;
 let app;
 
 test.before(async () => {
-  mongo = await MongoMemoryServer.create();
+  mongo = await MongoMemoryServer.create({ instance: { launchTimeout: 30000 } });
   process.env.MONGO_URI = mongo.getUri();
   app = require('../src/app');
   await mongoose.connect(process.env.MONGO_URI);
@@ -196,6 +196,34 @@ test('login, protected profile, and logout invalidate the issued token', async (
   const afterLogout = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
   assert.equal(afterLogout.status, 401);
   assert.ok(account.token);
+});
+
+test('notification routes list owner notifications and restrict read updates to that owner', async () => {
+  const owner = await register('notifications-owner@example.com');
+  const other = await register('notifications-other@example.com');
+  const { Notification } = require('../src/models');
+  const notification = await Notification.create({
+    user: owner.user.id,
+    type: 'test',
+    message: 'A test notification',
+    data: { source: 'integration-test' }
+  });
+
+  const listed = await request(app).get('/api/notifications/mine')
+    .set('Authorization', `Bearer ${owner.token}`);
+  assert.equal(listed.status, 200, JSON.stringify(listed.body));
+  assert.equal(listed.body.data.items.length, 1);
+  assert.equal(listed.body.data.items[0]._id, notification.id);
+  assert.equal(listed.body.data.items[0].readAt, undefined);
+
+  const forbidden = await request(app).patch(`/api/notifications/${notification.id}/read`)
+    .set('Authorization', `Bearer ${other.token}`);
+  assert.equal(forbidden.status, 404);
+
+  const marked = await request(app).patch(`/api/notifications/${notification.id}/read`)
+    .set('Authorization', `Bearer ${owner.token}`);
+  assert.equal(marked.status, 200, JSON.stringify(marked.body));
+  assert.ok(marked.body.data.notification.readAt);
 });
 
 test('password reset consumes one-time token and invalidates prior sessions', async () => {

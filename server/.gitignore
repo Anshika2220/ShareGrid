@@ -1,0 +1,7 @@
+.env
+.env.*
+.env.example
+!.env.example
+node_modules/
+private-uploads/
+npm-debug.log*
